@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ふりかえり たからばこ v39</title>
+    <title>ふりかえり たからばこ v40</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .sketchbook { background-image: radial-gradient(#e5e7eb 1px, transparent 1px); background-size: 20px 20px; }
@@ -11,7 +11,7 @@
         @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 50% { box-shadow: 0 0 0 20px rgba(239, 68, 68, 0); } }
         .suck-in { transition: all 0.8s cubic-bezier(0.6, -0.28, 0.735, 0.045); transform: scale(0) translate(200px, 400px) rotate(20deg) !important; opacity: 0; }
         .modal-bg { background-color: rgba(0,0,0,0.6); backdrop-filter: blur(4px); }
-        .step-num { position: absolute; top: -10px; left: -10px; width: 24px; height: 24px; background: white; border-radius: 50%; display: flex; items-center: center; justify-content: center; font-weight: 900; font-size: 14px; border: 2px solid currentColor; }
+        .step-num { position: absolute; top: -10px; left: -10px; width: 24px; height: 24px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 14px; border: 2px solid currentColor; }
     </style>
 </head>
 <body class="bg-amber-50 h-screen flex flex-col items-center p-4 overflow-hidden select-none">
@@ -26,28 +26,28 @@
 
     <div id="canvas" class="flex-1 w-full max-w-3xl bg-white rounded-3xl shadow-inner border-4 border-orange-100 p-6 mb-4 flex flex-col sketchbook relative transition-all duration-700">
         <textarea id="output" 
-            class="w-full h-full bg-transparent text-5xl font-black text-gray-700 leading-tight resize-none focus:outline-none"
+            class="w-full h-[80%] bg-transparent text-5xl font-black text-gray-700 leading-tight resize-none focus:outline-none"
             placeholder="きょうの おべんきょうを かいてね"
             spellcheck="false"></textarea>
+        
+        <div id="kanjiDisplay" class="w-full text-lg font-bold text-gray-300 border-t border-gray-100 pt-2 italic overflow-hidden whitespace-nowrap opacity-60"></div>
+        
         <div id="preview" class="text-2xl font-bold text-sky-300 italic pointer-events-none mt-2"></div>
     </div>
 
     <div class="w-full max-w-4xl flex flex-col gap-3 mb-6">
-        
         <div class="grid grid-cols-3 gap-4">
             <button id="micBtn" class="relative bg-sky-400 border-4 border-sky-100 rounded-2xl py-4 shadow-lg active:scale-95 flex flex-col items-center justify-center text-white">
                 <div class="step-num text-sky-400">1</div>
-                <span id="btnLabel" class="text-2xl font-black italic">おしてね</span>
-                <span class="text-[10px] font-bold opacity-80">おはなしする</span>
+                <span id="btnLabel" class="text-2xl font-black italic tracking-tighter text-center leading-none">おしてね</span>
+                <span class="text-[9px] font-bold opacity-80">おはなしする</span>
             </button>
-
-            <button id="listenBtn" class="relative bg-green-400 border-4 border-green-100 rounded-2xl py-4 shadow-lg active:scale-95 flex flex-col items-center justify-center text-white">
+            <button id="listenBtn" class="relative bg-green-400 border-4 border-green-100 rounded-2xl py-4 shadow-lg active:scale-95 flex flex-col items-center justify-center text-white leading-none">
                 <div class="step-num text-green-400">2</div>
                 <span class="text-3xl">📢</span>
                 <span class="text-[10px] font-black italic">きいてみる</span>
             </button>
-
-            <button id="saveBtn" class="relative bg-orange-400 border-4 border-orange-100 rounded-2xl py-4 shadow-lg active:scale-95 flex flex-col items-center justify-center text-white">
+            <button id="saveBtn" class="relative bg-orange-400 border-4 border-orange-100 rounded-2xl py-4 shadow-lg active:scale-95 flex flex-col items-center justify-center text-white leading-none">
                 <div class="step-num text-orange-400">3</div>
                 <span class="text-3xl">💰</span>
                 <span class="text-[10px] font-black">ほぞんする</span>
@@ -59,10 +59,10 @@
                 <span class="text-xl">🧹</span><span class="text-[10px] font-black text-gray-400">ぜんぶ消す</span>
             </button>
             <button id="backspaceBtn" class="bg-white border-2 border-orange-100 rounded-xl py-1 active:bg-orange-50 flex items-center justify-center gap-2">
-                <span class="text-xl">⌫</span><span class="text-[10px] font-black text-orange-400 text-center leading-none">1字<br>けす</span>
+                <span class="text-xl">⌫</span><span class="text-[10px] font-black text-orange-400 text-center leading-none">1字けす</span>
             </button>
             <button id="newLineBtn" class="bg-white border-2 border-gray-200 rounded-xl py-1 active:bg-gray-100 flex items-center justify-center gap-2">
-                <span class="text-xl">⏎</span><span class="text-[10px] font-black text-gray-400">つぎの行</span>
+                <span class="text-xl">⏎</span><span class="text-[10px] font-black text-gray-400 text-center leading-none">つぎの行</span>
             </button>
         </div>
     </div>
@@ -70,23 +70,15 @@
     <div id="subjectModal" class="hidden fixed inset-0 modal-bg z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-3xl p-6 w-full max-w-md shadow-2xl">
             <h2 id="subjectModalTitle" class="text-2xl font-black text-orange-400 mb-6 text-center italic">どの きょうか？</h2>
-            <div class="grid grid-cols-2 gap-4" id="subjectGrid">
-                <button class="subj-btn bg-pink-100 p-5 rounded-2xl font-black text-pink-600 text-xl shadow-sm active:scale-95" data-subj="こくご">こくご</button>
-                <button class="subj-btn bg-blue-100 p-5 rounded-2xl font-black text-blue-600 text-xl shadow-sm active:scale-95" data-subj="さんすう">さんすう</button>
-                <button class="subj-btn bg-green-100 p-5 rounded-2xl font-black text-green-600 text-xl shadow-sm active:scale-95" data-subj="せいかつ">せいかつ</button>
-                <button class="subj-btn bg-yellow-100 p-5 rounded-2xl font-black text-yellow-600 text-xl shadow-sm active:scale-95" data-subj="おんがく">おんがく</button>
-                <button class="subj-btn bg-purple-100 p-5 rounded-2xl font-black text-purple-600 text-xl shadow-sm active:scale-95" data-subj="ずこう">ずこう</button>
-                <button class="subj-btn bg-red-100 p-5 rounded-2xl font-black text-red-600 text-xl shadow-sm active:scale-95" data-subj="たいいく">たいいく</button>
+            <div class="grid grid-cols-2 gap-4">
+                <button class="subj-btn bg-pink-100 p-5 rounded-2xl font-black text-pink-600 text-xl" data-subj="こくご">こくご</button>
+                <button class="subj-btn bg-blue-100 p-5 rounded-2xl font-black text-blue-600 text-xl" data-subj="さんすう">さんすう</button>
+                <button class="subj-btn bg-green-100 p-5 rounded-2xl font-black text-green-600 text-xl" data-subj="せいかつ">せいかつ</button>
+                <button class="subj-btn bg-yellow-100 p-5 rounded-2xl font-black text-yellow-600 text-xl" data-subj="おんがく">おんがく</button>
+                <button class="subj-btn bg-purple-100 p-5 rounded-2xl font-black text-purple-600 text-xl" data-subj="ずこう">ずこう</button>
+                <button class="subj-btn bg-red-100 p-5 rounded-2xl font-black text-red-600 text-xl" data-subj="たいいく">たいいく</button>
             </div>
             <button onclick="closeModal('subjectModal')" class="w-full mt-6 text-gray-400 font-bold">やめる</button>
-        </div>
-    </div>
-
-    <div id="historyDetailModal" class="hidden fixed inset-0 modal-bg z-50 flex items-center justify-center p-4">
-        <div class="bg-amber-50 rounded-3xl p-6 w-full max-w-2xl h-[85vh] shadow-2xl flex flex-col border-4 border-amber-200">
-            <h2 id="historyDetailTitle" class="text-2xl font-black text-amber-600 mb-4 text-center italic"></h2>
-            <div id="historyDetailList" class="flex-1 overflow-y-auto space-y-4 pr-1"></div>
-            <button onclick="closeModal('historyDetailModal'); document.getElementById('subjectModal').classList.remove('hidden');" class="mt-4 bg-amber-400 text-white py-4 rounded-2xl font-black shadow-md">もどる</button>
         </div>
     </div>
 
@@ -100,18 +92,29 @@
         </div>
     </div>
 
+    <div id="historyDetailModal" class="hidden fixed inset-0 modal-bg z-50 flex items-center justify-center p-4">
+        <div class="bg-amber-50 rounded-3xl p-6 w-full max-w-2xl h-[85vh] shadow-2xl flex flex-col border-4 border-amber-200">
+            <h2 id="historyDetailTitle" class="text-2xl font-black text-amber-600 mb-4 text-center italic"></h2>
+            <div id="historyDetailList" class="flex-1 overflow-y-auto space-y-4 pr-1"></div>
+            <button onclick="closeModal('historyDetailModal'); document.getElementById('subjectModal').classList.remove('hidden');" class="mt-4 bg-amber-400 text-white py-4 rounded-2xl font-black">もどる</button>
+        </div>
+    </div>
+
     <script>
         const GAS_URL = 'https://script.google.com/macros/s/AKfycbzhJTL1fmXZFnrSzcM-n_N-ahauuOTTurjJyh5vSP1wUZy_x__C6F-J_YrJQm_n4Y-i/exec';
         const output = document.getElementById('output');
+        const kanjiDisplay = document.getElementById('kanjiDisplay');
         const preview = document.getElementById('preview');
         const canvas = document.getElementById('canvas');
+        
+        // 読み上げ用の漢字テキストを保持する変数
+        let currentKanjiText = "";
         let selectedSubject = "";
         let isHistoryMode = false;
 
-        // --- モーダル制御 ---
         function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
 
-        // 保存ボタン
+        // --- ほぞんロジック ---
         document.getElementById('saveBtn').onclick = () => {
             if(!output.value.trim()) return;
             isHistoryMode = false;
@@ -119,73 +122,76 @@
             document.getElementById('subjectModal').classList.remove('hidden');
         };
 
-        // 記録ボタン
         document.getElementById('historyBtn').onclick = () => {
             isHistoryMode = true;
             document.getElementById('subjectModalTitle').innerText = "どれを みたい？";
             document.getElementById('subjectModal').classList.remove('hidden');
         };
 
-        // 教科ボタン共通
         document.querySelectorAll('.subj-btn').forEach(btn => {
             btn.onclick = () => {
-                const subject = btn.dataset.subj;
+                const subj = btn.dataset.subj;
                 if (isHistoryMode) {
-                    showHistoryForSubject(subject);
+                    showHistory(subj);
                 } else {
-                    selectedSubject = subject;
+                    selectedSubject = subj;
                     document.getElementById('subjectModal').classList.add('hidden');
-                    document.getElementById('confirmText').innerText = `${selectedSubject}を\nほぞん する？`;
+                    // 「を」から「に」へ修正
+                    document.getElementById('confirmText').innerText = `${selectedSubject}に\nほぞん する？`;
                     document.getElementById('confirmModal').classList.remove('hidden');
                 }
             };
         });
 
-        // 保存実行
         document.getElementById('execSave').onclick = () => {
             closeModal('confirmModal');
             canvas.classList.add('suck-in');
             setTimeout(() => {
                 const history = JSON.parse(localStorage.getItem('furiHistory') || '[]');
-                history.unshift({ date: new Date().toLocaleString('ja-JP', {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'}), subject: selectedSubject, text: output.value });
+                // 保存はひらがなのみ
+                history.unshift({ date: new Date().toLocaleString('ja-JP'), subject: selectedSubject, text: output.value });
                 localStorage.setItem('furiHistory', JSON.stringify(history));
                 output.value = "";
+                kanjiDisplay.innerText = "";
+                currentKanjiText = "";
                 canvas.classList.remove('suck-in');
+                alert(`${selectedSubject}に ほぞんしました！`);
             }, 850);
         };
 
-        // 教科別の履歴表示
-        function showHistoryForSubject(subject) {
+        function showHistory(subject) {
             document.getElementById('subjectModal').classList.add('hidden');
-            const detailList = document.getElementById('historyDetailList');
+            const list = document.getElementById('historyDetailList');
             const data = JSON.parse(localStorage.getItem('furiHistory') || '[]');
             const filtered = data.filter(item => item.subject === subject);
-            
             document.getElementById('historyDetailTitle').innerText = `🎁 ${subject}の きろく`;
-            detailList.innerHTML = filtered.length ? "" : `<p class='text-center text-gray-400 mt-20 font-bold text-xl'>${subject}の きろくは<br>まだ ありません</p>`;
-            
+            list.innerHTML = filtered.length ? "" : "<p class='text-center mt-20 text-gray-400 font-bold'>きろくが ありません</p>";
             filtered.forEach(item => {
-                const div = document.createElement('div');
-                div.className = "bg-white p-5 rounded-2xl shadow-sm border-l-8 border-sky-300";
-                div.innerHTML = `<div class='text-[10px] text-gray-400 font-bold mb-1'>📅 ${item.date}</div><p class='text-xl font-black text-gray-700 leading-snug'>${item.text.replace(/\n/g, '<br>')}</p>`;
-                detailList.appendChild(div);
+                const d = document.createElement('div');
+                d.className = "bg-white p-4 rounded-2xl shadow-sm border-l-8 border-orange-300";
+                d.innerHTML = `<div class='text-[9px] text-gray-300'>${item.date}</div><p class='text-xl font-black text-gray-600'>${item.text.replace(/\n/g, '<br>')}</p>`;
+                list.appendChild(d);
             });
             document.getElementById('historyDetailModal').classList.remove('hidden');
         }
 
-        // --- 基本機能（音声認識・読み上げ・編集） ---
+        // --- 音声・読み上げ ---
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         let isRunning = false;
         if (SpeechRecognition) {
             const recognition = new SpeechRecognition();
             recognition.lang = 'ja-JP'; recognition.interimResults = true;
+            
             document.getElementById('micBtn').onclick = () => { if (!isRunning) recognition.start(); else recognition.stop(); };
+            
             document.getElementById('listenBtn').onclick = () => {
                 window.speechSynthesis.cancel();
-                const uttr = new SpeechSynthesisUtterance(output.value || "なにか かいてね");
+                // 読み上げは漢字かな混じり文を使用（誤読防止）
+                const uttr = new SpeechSynthesisUtterance(currentKanjiText || output.value || "なにか かいてね");
                 uttr.lang = 'ja-JP'; uttr.rate = 0.95; window.speechSynthesis.speak(uttr);
             };
-            document.getElementById('clearBtn').onclick = () => { if(confirm("ぜんぶ けす？")) output.value = ""; };
+
+            document.getElementById('clearBtn').onclick = () => { if(confirm("けす？")) { output.value = ""; kanjiDisplay.innerText = ""; currentKanjiText = ""; } };
             document.getElementById('backspaceBtn').onclick = () => {
                 const s = output.selectionStart;
                 output.value = output.value.substring(0, s - 1) + output.value.substring(output.selectionEnd);
@@ -196,6 +202,7 @@
                 output.value = output.value.substring(0, s) + "\n" + output.value.substring(s);
                 output.selectionStart = output.selectionEnd = s + 1; output.focus();
             };
+
             recognition.onstart = () => { isRunning = true; document.getElementById('micBtn').classList.add('bg-red-500', 'pulse-red'); document.getElementById('btnLabel').innerText = "おわる"; };
             recognition.onresult = (event) => {
                 let interim = ''; let final = '';
@@ -203,18 +210,27 @@
                     if (event.results[i].isFinal) final += event.results[i][0].transcript; else interim += event.results[i][0].transcript;
                 }
                 if (interim) preview.innerText = interim;
-                if (final) { preview.innerText = "へんかん中..."; sendToGas(final); }
+                if (final) { 
+                    preview.innerText = "へんかん中..."; 
+                    // 読み上げ用の漢字かな混じり文として保持
+                    currentKanjiText += final;
+                    kanjiDisplay.innerText = currentKanjiText;
+                    sendToGas(final); 
+                }
             };
             recognition.onend = () => { isRunning = false; document.getElementById('micBtn').classList.remove('bg-red-500', 'pulse-red'); document.getElementById('btnLabel').innerText = "おしてね"; preview.innerText = ""; };
         }
+
         async function sendToGas(text) {
             try {
                 const res = await fetch(`${GAS_URL}?text=${encodeURIComponent(text)}`);
                 const data = await res.json();
                 if (data.words) {
-                    const start = output.selectionStart; const add = data.words.join('');
+                    const start = output.selectionStart;
+                    const add = data.words.join('');
                     output.value = output.value.substring(0, start) + add + output.value.substring(start);
-                    output.selectionStart = output.selectionEnd = start + add.length; output.focus();
+                    output.selectionStart = output.selectionEnd = start + add.length;
+                    output.focus();
                 }
             } catch (e) {}
         }
