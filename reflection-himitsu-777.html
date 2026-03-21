@@ -3,24 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>学びの足跡 v4.9</title>
+    <title>学びの足跡 v5.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     
     <script>
-        // --- 1. データと設定 ---
+        // --- データ管理 ---
         var GAS_URL = 'https://script.google.com/macros/s/AKfycbxxE14tNshFIqZHwzhyGQtRDeSazD9aPex9Tm0gIGJjmUvd8jAiFN-bkQyNIt_D9cV_/exec';
         var appData = { t1: [], t2: [], t3: [], t4: [], photos: [] };
         var activeId = "";
         var isRec = false;
         var selectedSubject = "";
 
-        // --- 2. 画面とモーダルの操作 ---
+        // --- 画面操作 ---
         function openEditor(id) {
             activeId = id;
             var overlay = document.getElementById('editorOverlay');
             overlay.style.display = 'flex';
             overlay.style.pointerEvents = 'auto';
-            document.getElementById('editorTitle').innerText = {t1:'めあて', t2:'できたこと', t3:'むずかしかったこと', t4:'つぎのこと'}[id];
+            document.getElementById('editorTitle').innerText = {t1:'①めあて', t2:'②できたこと', t3:'③むずかしかった', t4:'④つぎのこと'}[id];
             renderEditor();
         }
 
@@ -34,8 +34,8 @@
             var m = document.getElementById(id);
             m.style.display = 'flex';
             m.style.pointerEvents = 'auto';
-            if(id === 'subjectModal') renderSubjectGrid();
-            if(id === 'historyModal') renderHistoryList();
+            if(id === 'subjectModal') renderSubjectGrid('save'); // 保存用
+            if(id === 'historyModal') renderHistorySubjects();   // 閲覧用（まず教科を選ぶ）
         }
 
         function closeModal(id) {
@@ -44,7 +44,7 @@
             m.style.pointerEvents = 'none';
         }
 
-        // --- 3. 音声認識 ---
+        // --- 音声認識 ---
         var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         var rec = SpeechRecognition ? new SpeechRecognition() : null;
         if(rec) {
@@ -61,11 +61,15 @@
             } catch(e) {}
         }
 
-        // --- 4. 保存と履歴ロジック ---
-        function renderSubjectGrid() {
-            var subjects = ["国語", "算数", "生活", "理科", "社会", "音楽", "図工", "体育", "道徳", "外国語"];
+        // --- 保存と履歴（教科選択ステップ追加） ---
+        var ALL_SUBJECTS = ["国語", "算数", "生活", "理科", "社会", "音楽", "図工", "体育", "道徳", "外国語"];
+
+        function renderSubjectGrid(mode) {
             var grid = document.getElementById('subjectGrid');
-            grid.innerHTML = subjects.map(s => `<button onclick="confirmSave('${s}')" class="bg-orange-400 text-white p-4 rounded-xl font-black text-xl">${s}</button>`).join('');
+            grid.innerHTML = ALL_SUBJECTS.map(s => `
+                <button onclick="${mode === 'save' ? `confirmSave('${s}')` : `viewHistoryBySubject('${s}')`}" 
+                class="bg-orange-400 text-white p-6 rounded-2xl font-black text-2xl shadow-md active:scale-95">${s}</button>
+            `).join('');
         }
 
         function confirmSave(subject) {
@@ -76,38 +80,60 @@
         }
 
         function executeSave() {
-            var history = JSON.parse(localStorage.getItem('furi_v49_history') || '[]');
+            var history = JSON.parse(localStorage.getItem('furi_v50_history') || '[]');
             var newEntry = {
-                id: Date.now(),
                 date: new Date().toLocaleString('ja-JP'),
                 subject: selectedSubject,
                 content: { t1: getRawText('t1'), t2: getRawText('t2'), t3: getRawText('t3'), t4: getRawText('t4') },
                 photos: appData.photos
             };
             history.unshift(newEntry);
-            localStorage.setItem('furi_v49_history', JSON.stringify(history.slice(0, 20))); // 最大20件
+            localStorage.setItem('furi_v50_history', JSON.stringify(history.slice(0, 30)));
             alert('たからばこに いれたよ！');
             location.reload();
         }
 
         function getRawText(id) { return appData[id].map(w => w.surface).join(''); }
 
-        function renderHistoryList() {
-            var history = JSON.parse(localStorage.getItem('furi_v49_history') || '[]');
+        // 記録閲覧：まず教科を選ばせる
+        function renderHistorySubjects() {
+            document.getElementById('historyTitle').innerText = "🎁 どの きょうかを みる？";
+            var history = JSON.parse(localStorage.getItem('furi_v50_history') || '[]');
+            var usedSubjects = [...new Set(history.map(h => h.subject))];
             var list = document.getElementById('historyList');
-            if(history.length === 0) { list.innerHTML = "<p class='text-center py-10 text-gray-400'>まだ きろくが ないよ</p>"; return; }
-            list.innerHTML = history.map(h => `
-                <div class="bg-orange-50 p-4 rounded-2xl border-l-8 border-orange-400 mb-4">
-                    <div class="text-[10px] text-orange-300">${h.date} 【${h.subject}】</div>
-                    <div class="text-sm font-bold text-gray-700 mt-1">
-                        <div>① ${h.content.t1}</div><div>② ${h.content.t2}</div>
+            
+            if(usedSubjects.length === 0) {
+                list.innerHTML = "<p class='text-center py-20 text-gray-400 font-bold'>まだ きろくが ないよ</p>";
+                return;
+            }
+            list.innerHTML = `<div class="grid grid-cols-2 gap-4">` + 
+                usedSubjects.map(s => `<button onclick="viewHistoryBySubject('${s}')" class="bg-orange-100 text-orange-600 p-8 rounded-3xl font-black text-3xl shadow-sm">${s}</button>`).join('') + 
+                `</div>`;
+        }
+
+        function viewHistoryBySubject(subject) {
+            document.getElementById('historyTitle').innerText = "🎁 " + subject + "の きろく";
+            var history = JSON.parse(localStorage.getItem('furi_v50_history') || '[]');
+            var filtered = history.filter(h => h.subject === subject);
+            var list = document.getElementById('historyList');
+            
+            list.innerHTML = `
+                <button onclick="renderHistorySubjects()" class="mb-4 text-orange-400 font-bold">← きょうか選びに もどる</button>
+                ` + filtered.map(h => `
+                <div class="bg-white border-4 border-orange-100 p-5 rounded-[2rem] mb-6 shadow-sm">
+                    <div class="text-xs text-orange-300 font-black mb-2">${h.date}</div>
+                    <div class="space-y-2 text-lg font-black text-gray-700">
+                        <div class="border-b border-orange-50 pb-1"><span class="text-orange-400">①</span> ${h.content.t1}</div>
+                        <div class="border-b border-orange-50 pb-1"><span class="text-orange-400">②</span> ${h.content.t2}</div>
+                        <div class="border-b border-orange-50 pb-1"><span class="text-orange-400">③</span> ${h.content.t3}</div>
+                        <div><span class="text-orange-400">④</span> ${h.content.t4}</div>
                     </div>
-                    <div class="flex gap-1 mt-2">${h.photos.map(p => `<img src="${p}" style="width:40px;height:40px;object-fit:cover;border-radius:4px;">`).join('')}</div>
+                    <div class="flex gap-2 mt-4 overflow-x-auto">${h.photos.map(p => `<img src="${p}" class="w-24 h-24 object-cover rounded-xl border-2 border-orange-50">`).join('')}</div>
                 </div>
             `).join('');
         }
 
-        // --- 5. 写真と描画 ---
+        // --- 写真と描画 ---
         function handlePhotos(input) {
             Array.from(input.files).forEach(file => {
                 if(appData.photos.length >= 4) return;
@@ -116,7 +142,7 @@
                     var img = new Image();
                     img.onload = function() {
                         var canvas = document.createElement('canvas');
-                        var max = 300; var w = img.width, h = img.height;
+                        var max = 400; var w = img.width, h = img.height;
                         if(w > h) { if(w > max){ h *= max/w; w = max; } } else { if(h > max){ w *= max/h; h = max; } }
                         canvas.width = w; canvas.height = h;
                         canvas.getContext('2d').drawImage(img, 0, 0, w, h);
@@ -146,65 +172,93 @@
     </script>
 
     <style>
-        body { height: 100dvh; background-color: #fffbeb; margin: 0; overflow: hidden; font-family: sans-serif; }
-        .tile-btn { background: white; border: 4px solid #ffedd5; border-radius: 1.5rem; padding: 1rem; display: flex; flex-direction: column; width: 100%; height: 130px; text-align: left; }
-        .tile-label { color: #fb923c; font-weight: 900; font-size: 0.8rem; margin-bottom: 0.3rem; }
-        .tile-preview { flex: 1; color: #4b5563; font-weight: bold; overflow: hidden; font-size: 1rem; line-height: 1.2; word-break: break-all; }
-        #editorOverlay, .modal-bg { position: fixed; inset: 0; background: #fffbeb; z-index: 9999; display: none; flex-direction: column; padding: 1rem; pointer-events: none; }
+        body { height: 100dvh; background-color: #fffbeb; margin: 0; display: flex; flex-direction: column; overflow: hidden; font-family: sans-serif; }
+        
+        /* 動的グリッド設計：画面いっぱいに広がる */
+        .main-container { flex: 1; display: flex; flex-direction: column; padding: 1rem; gap: 1rem; min-height: 0; }
+        .tiles-grid { flex: 1; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr 0.7fr; gap: 1rem; min-height: 0; }
+        
+        .tile-btn { background: white; border: 4px solid #ffedd5; border-radius: 2.5rem; padding: 1.5rem; display: flex; flex-direction: column; text-align: left; min-height: 0; }
+        .tile-btn:active { background: #fff7ed; transform: scale(0.98); }
+        .tile-label { color: #fb923c; font-weight: 900; font-size: 1rem; margin-bottom: 0.5rem; flex-shrink: 0; }
+        .tile-preview { flex: 1; color: #4b5563; font-weight: 900; overflow: hidden; font-size: 1.5rem; line-height: 1.3; word-break: break-all; }
+        
+        #editorOverlay, .modal-bg { position: fixed; inset: 0; z-index: 9999; display: none; flex-direction: column; padding: 1.5rem; pointer-events: none; }
+        #editorOverlay { background: #fffbeb; }
         .modal-bg { background-color: rgba(0,0,0,0.8); backdrop-filter: blur(10px); justify-content: center; }
-        #richDisplay { flex: 1; background: white; border: 4px solid #ffedd5; border-radius: 2rem; padding: 1.5rem; font-size: 2rem; font-weight: 900; outline: none; overflow-y: auto; }
-        .photo-grid-mini { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; width: 100%; height: 100%; pointer-events: none; }
-        .photo-item { width: 100%; height: 100%; object-fit: cover; border-radius: 0.5rem; background: #eee; }
+        
+        #richDisplay { flex: 1; background: white; border: 4px solid #ffedd5; border-radius: 2.5rem; padding: 2rem; font-size: 3rem; font-weight: 900; outline: none; overflow-y: auto; }
+        
+        .photo-grid-mini { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; height: 100%; pointer-events: none; }
+        .photo-item { width: 100%; height: 100%; object-fit: cover; border-radius: 1rem; background: #eee; }
     </style>
 </head>
-<body class="p-3 select-none">
+<body class="select-none">
 
-    <div id="mainView" class="max-w-3xl mx-auto">
-        <div class="flex justify-between items-center mb-4">
-            <button onclick="openModal('historyModal')" class="bg-white border-2 border-orange-200 rounded-full px-4 py-1 text-xs font-black text-orange-400 active:scale-90">🎁 きろくをみる</button>
-            <h1 class="text-xl font-black text-orange-400">学びの足跡 v4.9</h1>
-            <select id="gradeMode" class="bg-orange-400 text-white font-black text-xs px-2 py-1 rounded-full border-none outline-none"><option value="1">1ねん</option><option value="99">ぜんぶ</option></select>
-        </div>
+    <div class="px-4 pt-4 flex justify-between items-center shrink-0">
+        <button onclick="openModal('historyModal')" class="bg-white border-2 border-orange-200 rounded-full px-5 py-2 text-sm font-black text-orange-400 active:scale-90 shadow-sm">🎁 きろくをみる</button>
+        <h1 class="text-2xl font-black text-orange-400 tracking-tighter">学びの足跡</h1>
+        <div class="w-20"></div> </div>
 
-        <div class="grid grid-cols-2 gap-4">
-            <button class="tile-btn" onclick="openEditor('t1')"><div class="tile-label">めあて</div><div id="p-t1" class="tile-preview">タップして かく</div></button>
-            <button class="tile-btn" onclick="openEditor('t2')"><div class="tile-label">できたこと</div><div id="p-t2" class="tile-preview">タップして かく</div></button>
-            <button class="tile-btn" onclick="openEditor('t3')"><div class="tile-label">むずかしかった</div><div id="p-t3" class="tile-preview">タップして かく</div></button>
-            <button class="tile-btn" onclick="openEditor('t4')"><div class="tile-label">つぎのこと</div><div id="p-t4" class="tile-preview">タップして かく</div></button>
-            <button class="tile-btn col-span-2" style="height: 100px;" onclick="document.getElementById('fileInput').click()"><div class="tile-label">しゃしん</div><div id="photoGrid" class="photo-grid-mini"></div><input type="file" id="fileInput" accept="image/*" multiple style="display:none;" onchange="handlePhotos(this)"></button>
+    <div class="main-container">
+        <div class="tiles-grid">
+            <button class="tile-btn" onclick="openEditor('t1')"><div class="tile-label">①めあて</div><div id="p-t1" class="tile-preview"></div></button>
+            <button class="tile-btn" onclick="openEditor('t2')"><div class="tile-label">②できたこと</div><div id="p-t2" class="tile-preview"></div></button>
+            <button class="tile-btn" onclick="openEditor('t3')"><div class="tile-label">③むずかしかった</div><div id="p-t3" class="tile-preview"></div></button>
+            <button class="tile-btn" onclick="openEditor('t4')"><div class="tile-label">④つぎのこと</div><div id="p-t4" class="tile-preview"></div></button>
+            <button class="tile-btn col-span-2" onclick="document.getElementById('fileInput').click()">
+                <div class="tile-label">しゃしん</div>
+                <div id="photoGrid" class="photo-grid-mini"></div>
+                <input type="file" id="fileInput" accept="image/*" multiple style="display:none;" onchange="handlePhotos(this)">
+            </button>
         </div>
-        <button onclick="openModal('subjectModal')" class="w-full bg-orange-400 text-white rounded-2xl py-4 font-black text-xl mt-4 shadow-lg active:scale-95">ぜんぶ ほぞんする 💰</button>
+        
+        <button onclick="openModal('subjectModal')" class="w-full bg-orange-400 text-white rounded-[2rem] py-6 font-black text-3xl shadow-xl active:scale-95 shrink-0">ぜんぶ ほぞんする 💰</button>
     </div>
 
     <div id="historyModal" class="modal-bg">
-        <div class="bg-white rounded-[2rem] p-6 w-full max-w-lg h-[80vh] flex flex-col pointer-events-auto">
-            <h2 class="text-2xl font-black text-orange-400 mb-4 text-center">🎁 これまでの きろく</h2>
-            <div id="historyList" class="flex-1 overflow-y-auto"></div>
-            <button onclick="closeModal('historyModal')" class="w-full mt-4 bg-orange-400 text-white py-4 rounded-2xl font-black">とじる</button>
+        <div class="bg-amber-50 rounded-[3rem] p-8 w-full max-w-2xl h-[85vh] flex flex-col pointer-events-auto border-8 border-white shadow-2xl">
+            <h2 id="historyTitle" class="text-3xl font-black text-orange-400 mb-6 text-center italic">🎁 きろく</h2>
+            <div id="historyList" class="flex-1 overflow-y-auto pr-2"></div>
+            <button onclick="closeModal('historyModal')" class="w-full mt-6 bg-orange-400 text-white py-5 rounded-[2rem] font-black text-2xl shadow-lg">とじる</button>
         </div>
     </div>
 
     <div id="subjectModal" class="modal-bg">
-        <div class="bg-white rounded-[2rem] p-6 w-full max-w-lg pointer-events-auto">
-            <h2 class="text-2xl font-black text-orange-400 mb-4 text-center">どの きょうか？</h2>
-            <div id="subjectGrid" class="grid grid-cols-2 gap-3 mb-4"></div>
-            <button onclick="closeModal('subjectModal')" class="w-full text-gray-400 font-bold">やめる</button>
+        <div class="bg-white rounded-[3rem] p-8 w-full max-w-lg pointer-events-auto border-8 border-orange-100">
+            <h2 class="text-3xl font-black text-orange-400 mb-8 text-center">どの きょうか？</h2>
+            <div id="subjectGrid" class="grid grid-cols-2 gap-4 mb-6"></div>
+            <button onclick="closeModal('subjectModal')" class="w-full text-gray-400 font-bold text-xl">やめる</button>
         </div>
     </div>
 
     <div id="confirmModal" class="modal-bg">
-        <div class="bg-white rounded-[2rem] p-10 w-full max-w-sm text-center pointer-events-auto">
-            <p id="confirmText" class="text-2xl font-black text-gray-700 mb-8"></p>
-            <div class="flex gap-4"><button onclick="closeModal('confirmModal')" class="flex-1 bg-gray-100 py-4 rounded-2xl font-black text-gray-400">いいえ</button><button onclick="executeSave()" class="flex-1 bg-orange-500 py-4 rounded-2xl font-black text-white shadow-lg">はい！</button></div>
+        <div class="bg-white rounded-[3rem] p-12 w-full max-w-sm text-center pointer-events-auto border-8 border-orange-400">
+            <p id="confirmText" class="text-3xl font-black text-gray-700 mb-10"></p>
+            <div class="flex gap-4">
+                <button onclick="closeModal('confirmModal')" class="flex-1 bg-gray-100 py-5 rounded-2xl font-black text-gray-400 text-xl">いいえ</button>
+                <button onclick="executeSave()" class="flex-1 bg-orange-500 py-5 rounded-2xl font-black text-white shadow-lg text-xl">はい！</button>
+            </div>
         </div>
     </div>
 
     <div id="editorOverlay">
-        <div class="flex justify-between items-center mb-3 pointer-events-auto"><button onclick="closeEditor(false)" class="text-gray-400 font-bold p-2">✖</button><div id="editorTitle" class="text-orange-400 font-black text-xl">編集</div><button onclick="closeEditor(true)" class="bg-orange-400 text-white px-6 py-2 rounded-full font-black">決定</button></div>
-        <div id="richDisplay" contenteditable="true" class="pointer-events-auto"></div>
-        <div id="kanjiDisplay" class="text-xs text-gray-300 italic opacity-60 mt-1"></div>
-        <div class="grid grid-cols-2 gap-4 mt-4 pointer-events-auto"><button id="micBtn" onclick="if(rec) isRec ? rec.stop() : rec.start()" class="bg-sky-400 rounded-2xl py-6 text-white font-black text-2xl shadow-lg"><span id="micLabel">おしてね</span></button><button onclick="appData[activeId].pop(); renderEditor();" class="bg-white border-4 border-orange-100 rounded-2xl py-6 text-orange-400 font-black text-2xl shadow-lg">1字けす</button></div>
+        <div class="flex justify-between items-center mb-4 pointer-events-auto px-2">
+            <button onclick="closeEditor(false)" class="text-gray-400 font-black text-2xl p-2">✖ やめる</button>
+            <div id="editorTitle" class="text-orange-400 font-black text-3xl">編集</div>
+            <button onclick="closeEditor(true)" class="bg-orange-400 text-white px-10 py-3 rounded-full font-black text-2xl shadow-md">決定</button>
+        </div>
+        <div id="richDisplay" contenteditable="true" class="pointer-events-auto shadow-inner"></div>
+        <div id="kanjiDisplay" class="text-lg text-gray-300 italic font-bold mt-2 px-4 opacity-50"></div>
+        <div class="grid grid-cols-2 gap-6 mt-6 pointer-events-auto">
+            <button id="micBtn" onclick="toggleMic()" class="bg-sky-400 rounded-[2rem] py-10 text-white font-black text-4xl shadow-xl active:scale-95"><span id="micLabel">おしてね</span></button>
+            <button onclick="appData[activeId].pop(); renderEditor();" class="bg-white border-4 border-orange-100 rounded-[2rem] py-10 text-orange-400 font-black text-4xl shadow-xl active:scale-95">1字けす</button>
+        </div>
     </div>
 
+    <script>
+        function toggleMic() { if(!rec) return; isRec ? rec.stop() : rec.start(); }
+        window.onload = function() { refreshTiles(); };
+    </script>
 </body>
 </html>
