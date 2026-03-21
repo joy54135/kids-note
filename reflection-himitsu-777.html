@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>ふりかえり たからばこ v46</title>
+    <title>ふりかえり たからばこ v47</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
@@ -23,15 +23,15 @@
             <span class="text-2xl">🎁</span> <span id="label-history" class="text-sm font-black text-orange-400 italic">きろく</span>
         </button>
         <h1 id="label-title" class="text-xl font-black text-orange-400 tracking-tighter text-center flex-1">ふりかえり たからばこ</h1>
-        <select id="gradeMode" class="bg-orange-400 text-white font-black text-xs px-4 py-2 rounded-full border-2 border-white shadow-sm outline-none appearance-none">
-            <option value="0">ひらがな</option>
-            <option value="1" selected>1ねんせい</option>
-            <option value="2">2ねんせい</option>
-            <option value="3">3ねんせい</option>
-            <option value="4">4ねんせい</option>
-            <option value="5">5ねんせい</option>
-            <option value="6">6ねんせい</option>
-            <option value="99">ぜんぶ</option>
+        <select id="gradeMode" class="bg-orange-400 text-white font-black text-[10px] px-4 py-2 rounded-full border-2 border-white shadow-sm outline-none appearance-none">
+            <option value="0">ひらがなとカタカナ</option>
+            <option value="1" selected>1年生までの漢字</option>
+            <option value="2">2年生までの漢字</option>
+            <option value="3">3年生までの漢字</option>
+            <option value="4">4年生までの漢字</option>
+            <option value="5">5年生までの漢字</option>
+            <option value="6">6年生までの漢字</option>
+            <option value="99">ぜんぶの漢字</option>
         </select>
     </div>
 
@@ -106,20 +106,27 @@
         
         // 音響システム
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        function playSfx(freq, type, duration) {
+        function playSfx(freq, type, duration, startTime = 0) {
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
             osc.type = type;
-            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
-            gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
-            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + duration);
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime + startTime);
+            gain.gain.setValueAtTime(0.1, audioCtx.currentTime + startTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + startTime + duration);
             osc.connect(gain); gain.connect(audioCtx.destination);
-            osc.start(); osc.stop(audioCtx.currentTime + duration);
+            osc.start(audioCtx.currentTime + startTime); 
+            osc.stop(audioCtx.currentTime + startTime + duration);
         }
         const sfx = {
             click: () => playSfx(600, 'sine', 0.1),
             pop: () => { playSfx(400, 'sine', 0.1); setTimeout(() => playSfx(800, 'sine', 0.1), 50); },
-            save: () => { playSfx(500, 'triangle', 0.3); playSfx(1000, 'sine', 0.5); }
+            // ★ 新・キラキラ保存音（アルペジオ）
+            save: () => {
+                const freqs = [1000, 1500, 2000, 2500];
+                freqs.forEach((f, i) => {
+                    playSfx(f, 'sine', 0.4, i * 0.05);
+                });
+            }
         };
 
         const KANJI_LISTS = {
@@ -135,7 +142,7 @@
             "記録": "きろく", "保存": "ほぞん", "宝箱": "たからばこ", "全部消す": "ぜんぶ消す", "お話しする": "おはなしする", 
             "きいてみる": "きいてみる", "改行": "かいぎょう", "国語": "こくご", "算数": "さんすう", "社会": "しゃかい", "理科": "りか",
             "生活": "せいかつ", "音楽": "おんがく", "図工": "ずこう", "体育": "たいいく", "道徳": "どうとく", "外国語": "がいこくご",
-            "戻る": "もどる", "辞める": "やめる", "おしてね": "おしてね", "おわる": "おわる"
+            "戻る": "もどる", "辞める": "やめる", "おしてね": "おしてね", "キャンセル": "きゃんせる"
         };
 
         const ricDisplay = document.getElementById('richDisplay');
@@ -147,6 +154,7 @@
         let fullConversation = []; 
         let currentKanjiText = ""; 
         let isHistoryView = false;
+        let isRunning = false;
 
         function isKanji(ch) { return (ch >= '\u4e00' && ch <= '\u9faf'); }
         function getGradeLevel() { return parseInt(gradeMode.value); }
@@ -175,7 +183,7 @@
             const set = (id, txt) => { const el = document.getElementById(id); if (el) el.innerText = smartConvert(txt, lv); };
             set("label-history", "記録");
             set("label-title", "ふりかえり たからばこ");
-            set("label-mic", isRunning ? "おわる" : "おしてね");
+            set("label-mic", isRunning ? "キャンセル" : "おしてね");
             set("label-mic-sub", "お話しする");
             set("label-listen", "きいてみる");
             set("label-save", "保存する");
@@ -210,19 +218,15 @@
 
         gradeMode.onchange = renderDisplay;
 
-        // --- 教科選択モーダル構築 ---
         function openSubjectModal(forHistory) {
             sfx.pop();
             isHistoryView = forHistory;
             const lv = getGradeLevel();
             const grid = document.getElementById('subjectGrid');
             grid.innerHTML = "";
-            
-            // 学年によって教科を変える
             let subjects = lv >= 3 || lv === 99 ? 
                 ["国語", "算数", "社会", "理科", "音楽", "図工", "体育", "道徳", "外国語"] : 
                 ["国語", "算数", "生活", "音楽", "図工", "体育", "道徳"];
-
             subjects.forEach(s => {
                 const btn = document.createElement('button');
                 btn.className = "p-5 rounded-3xl font-black text-2xl shadow-sm active:scale-95 transition-all text-white " + 
@@ -237,9 +241,8 @@
 
         function onSubjectClick(subj) {
             sfx.click();
-            if (isHistoryView) {
-                showHistory(subj);
-            } else {
+            if (isHistoryView) { showHistory(subj); }
+            else {
                 window.selectedSubj = subj;
                 const lv = getGradeLevel();
                 const suffix = (lv <= 2) ? "に ほぞん する？" : "に 保存する？";
@@ -253,7 +256,7 @@
         document.getElementById('historyBtn').onclick = () => openSubjectModal(true);
 
         document.getElementById('execSave').onclick = () => {
-            sfx.save();
+            sfx.save(); // キラキラ音
             closeModal('confirmModal');
             canvas.classList.add('suck-in');
             setTimeout(() => {
@@ -282,16 +285,13 @@
 
         function closeModal(id) { sfx.click(); document.getElementById(id).classList.add('hidden'); }
 
-        // --- 音声認識 ---
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        let isRunning = false;
         if (SpeechRecognition) {
             const recognition = new SpeechRecognition();
             recognition.lang = 'ja-JP'; recognition.interimResults = true;
             document.getElementById('micBtn').onclick = () => { sfx.click(); if (!isRunning) recognition.start(); else recognition.stop(); };
             document.getElementById('listenBtn').onclick = () => {
-                sfx.click();
-                window.speechSynthesis.cancel();
+                sfx.click(); window.speechSynthesis.cancel();
                 const uttr = new SpeechSynthesisUtterance(currentKanjiText || ricDisplay.innerText || "なにか かいてね");
                 uttr.lang = 'ja-JP'; uttr.rate = 0.95; window.speechSynthesis.speak(uttr);
             };
