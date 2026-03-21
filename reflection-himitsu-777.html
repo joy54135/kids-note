@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ひらがな めがね Ver.19.0</title>
+    <title>ひらがな めがね Ver.21.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @keyframes pop { 0% { transform: scale(0.5) opacity: 0; } 100% { transform: scale(1) opacity: 1; } }
@@ -34,7 +34,8 @@
     </div>
 
     <script>
-        const GAS_URL = 'https://script.google.com/macros/s/AKfycbz_Wx6VpGVwFui_NNuWoMNT2Tmx1OxPvWg23MbRnKt5aeLCs3xCzPUO_bkMeKVmwHE4/exec'; 
+        // ★GASの最新URLに書き換えてください
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbwaf-f-QEIMAdv3nN_Fym7aUk7qSuLP9h1-PWBY26AW6rrMeFePTtDNL4Ac5FJrEo5k/exec'; 
         
         const sounds = {
             start: new Audio('https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3'),
@@ -102,10 +103,11 @@
                     sounds.success.play().catch(() => {});
                     msg.innerText = "";
                 } else {
+                    // data.debug を表示することで undefined を回避
                     showError(data.error, data.debug);
                 }
             } catch (e) {
-                showError("つうしんエラー", "インターネットの 接続を かくにんしてね");
+                showError("つうしんエラー", "ネットが つながっていないかも？");
             }
         }
 
