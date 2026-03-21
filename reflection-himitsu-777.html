@@ -1,9 +1,9 @@
-<<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>ふりかえり たからばこ v4.1</title>
+    <title>ふりかえり たからばこ v4.2</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
@@ -37,17 +37,17 @@
     </div>
 
     <div id="mainGrid" class="flex-1 w-full max-w-3xl mx-auto grid grid-cols-2 grid-rows-[1fr_1fr_0.8fr] gap-4 mb-4">
-        <div class="tile" onclick="openEditor('t1')"><div class="tile-label">めあて</div><div id="p-t1" class="tile-preview text-2xl"></div></div>
-        <div class="tile" onclick="openEditor('t2')"><div class="tile-label">できたこと</div><div id="p-t2" class="tile-preview text-2xl"></div></div>
-        <div class="tile" onclick="openEditor('t3')"><div class="tile-label">むずかしかったこと</div><div id="p-t3" class="tile-preview text-2xl"></div></div>
-        <div class="tile" onclick="openEditor('t4')"><div class="tile-label">つぎのこと</div><div id="p-t4" class="tile-preview text-2xl"></div></div>
-        <div class="tile col-span-2" onclick="triggerPhotoInput()"><div class="tile-label">しゃしん</div><div id="p-t5" class="photo-grid"></div><input type="file" id="fileInput" accept="image/*" multiple class="hidden"></div>
+        <div class="tile" id="btn-t1"><div class="tile-label">めあて</div><div id="p-t1" class="tile-preview text-2xl"></div></div>
+        <div class="tile" id="btn-t2"><div class="tile-label">できたこと</div><div id="p-t2" class="tile-preview text-2xl"></div></div>
+        <div class="tile" id="btn-t3"><div class="tile-label">むずかしかったこと</div><div id="p-t3" class="tile-preview text-2xl"></div></div>
+        <div class="tile" id="btn-t4"><div class="tile-label">つぎのこと</div><div id="p-t4" class="tile-preview text-2xl"></div></div>
+        <div class="tile col-span-2" id="btn-photo"><div class="tile-label">しゃしん</div><div id="p-t5" class="photo-grid"></div><input type="file" id="fileInput" accept="image/*" multiple class="hidden"></div>
     </div>
 
     <div class="w-full max-w-3xl mx-auto flex gap-4"><button id="finalSaveBtn" class="flex-1 bg-orange-400 border-4 border-orange-100 rounded-2xl py-4 shadow-lg active:scale-95 text-white font-black text-xl">ほぞんする 💰</button></div>
 
-    <div id="editorOverlay" class="sketchbook">
-        <div class="flex justify-between items-center mb-4"><button onclick="closeEditor(false)" class="text-gray-400 font-bold text-lg">✖ やめる</button><div id="editorTitle" class="text-orange-400 font-black text-xl">編集</div><button onclick="closeEditor(true)" class="bg-orange-400 text-white px-6 py-2 rounded-full font-black">決定 ✅</button></div>
+    <div id="editorOverlay" class="sketchbook" style="display: none;">
+        <div class="flex justify-between items-center mb-4"><button id="cancelEditor" class="text-gray-400 font-bold text-lg">✖ やめる</button><div id="editorTitle" class="text-orange-400 font-black text-xl">編集</div><button id="okEditor" class="bg-orange-400 text-white px-6 py-2 rounded-full font-black">決定 ✅</button></div>
         <div id="canvas" class="flex-1 bg-white rounded-3xl shadow-inner border-4 border-orange-100 p-6 mb-4 flex flex-col relative min-h-0">
             <div id="outputContainer" class="flex-1 overflow-y-auto min-h-0"><div id="richDisplay" contenteditable="true" class="text-5xl font-black text-gray-700 leading-tight w-full"></div></div>
             <div id="kanjiDisplay" class="shrink-0 w-full text-lg font-bold text-gray-300 border-t border-gray-100 pt-2 italic opacity-60"></div>
@@ -60,11 +60,20 @@
         </div>
     </div>
 
-    <div id="photoViewerModal" class="hidden modal-bg flex-col" onclick="this.classList.add('hidden')"><div id="photoFullList" class="w-full max-w-4xl h-full flex flex-col items-center gap-8 overflow-y-auto p-8"></div></div>
-    <div id="confirmModal" class="hidden modal-bg"><div class="bg-white rounded-3xl p-10 w-full max-w-sm shadow-2xl text-center border-8 border-orange-100"><p id="confirmText" class="text-2xl font-black text-gray-700 mb-10">ほぞんする？</p><div class="flex gap-4"><button onclick="document.getElementById('confirmModal').classList.add('hidden')" class="flex-1 bg-gray-100 py-4 rounded-2xl font-bold text-gray-400">いいえ</button><button id="execSave" class="flex-1 bg-orange-500 py-4 rounded-2xl font-black text-white shadow-lg">はい！</button></div></div></div>
+    <div id="photoViewerModal" class="hidden modal-bg flex-col" style="display: none;"><div id="photoFullList" class="w-full max-w-4xl h-full flex flex-col items-center gap-8 overflow-y-auto p-8"></div></div>
+    
+    <div id="confirmModal" class="hidden modal-bg" style="display: none;">
+        <div class="bg-white rounded-3xl p-10 w-full max-w-sm shadow-2xl text-center border-8 border-orange-100">
+            <p id="confirmText" class="text-2xl font-black text-gray-700 mb-10">ほぞんする？</p>
+            <div class="flex gap-4">
+                <button id="cancelSave" class="flex-1 bg-gray-100 py-4 rounded-2xl font-bold text-gray-400">いいえ</button>
+                <button id="execSave" class="flex-1 bg-orange-500 py-4 rounded-2xl font-black text-white shadow-lg">はい！</button>
+            </div>
+        </div>
+    </div>
 
     <script>
-        // 1. 変数の定義（最上部へ移動）
+        // 1. 基本定義
         const GAS_URL = 'https://script.google.com/macros/s/AKfycbxxE14tNshFIqZHwzhyGQtRDeSazD9aPex9Tm0gIGJjmUvd8jAiFN-bkQyNIt_D9cV_/exec';
         const KANJI_LISTS = { 1: "一右雨円王音下火花貝学気九休玉金空月犬見五口校左三山子四糸字耳七車手十出女小上森人水正生青夕石赤千川先早草足村大男竹中虫町天田土二日入年白八百文木本名目立力林六", 2: "引羽雲園遠何科夏家歌画回会海絵外角楽活間丸岩顔汽記帰弓牛魚京強教近兄形計元言原戸古午後語工公広交光考行高黄合谷国黒今才細作算止市矢姉思紙寺自時室社弱首秋週春書少場色食心新親図数西声星晴切雪船線前組走多太体台地池知茶昼長鳥朝直通弟店点電刀冬當東答頭同道読内南肉馬売買麦半番父風分聞米歩母方北毎妹万明鳴毛門夜野友用曜来里理話" };
         
@@ -72,7 +81,7 @@
         let currentConversation = []; let currentKanjiText = ""; let isRunning = false;
         let audioCtx = null;
 
-        // 2. 初期化と描画関数
+        // 2. 描画ロジック
         function renderTilePreviews() {
             const lv = parseInt(document.getElementById('gradeMode').value);
             const allowed = (l) => { let s=""; for(let i=1;i<=l;i++) s+=KANJI_LISTS[i]||""; return s; }(lv);
@@ -91,7 +100,19 @@
             document.getElementById('p-t5').innerHTML = appState.tiles.t5.images.map(src => `<img src="${src}" class="photo-item" onclick="event.stopPropagation(); showFullPhoto('${src}')">`).join('');
         }
 
-        // 3. エディタ操作
+        function renderEditorDisplay() {
+            const lv = parseInt(document.getElementById('gradeMode').value);
+            const allowed = (l) => { let s=""; for(let i=1;i<=l;i++) s+=KANJI_LISTS[i]||""; return s; }(lv);
+            let html = ""; currentConversation.forEach(w => {
+                const furigana = w.furigana || w.surface;
+                if(lv===0) html += furigana; else if(lv===99) html += w.surface;
+                else { let can = true; for(let c of w.surface){ if(c >= '\u4e00' && c <= '\u9faf' && !allowed.includes(c)) can = false; } html += can ? w.surface : furigana; }
+            });
+            document.getElementById('richDisplay').innerHTML = html;
+            document.getElementById('kanjiDisplay').innerText = currentKanjiText;
+        }
+
+        // 3. アクション
         function openEditor(id) {
             if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             if(audioCtx.state === 'suspended') audioCtx.resume();
@@ -114,22 +135,8 @@
             renderTilePreviews();
         }
 
-        function renderEditorDisplay() {
-            const lv = parseInt(document.getElementById('gradeMode').value);
-            const allowed = (l) => { let s=""; for(let i=1;i<=l;i++) s+=KANJI_LISTS[i]||""; return s; }(lv);
-            let html = ""; currentConversation.forEach(w => {
-                const furigana = w.furigana || w.surface;
-                if(lv===0) html += furigana; else if(lv===99) html += w.surface;
-                else { let can = true; for(let c of w.surface){ if(c >= '\u4e00' && c <= '\u9faf' && !allowed.includes(c)) can = false; } html += can ? w.surface : furigana; }
-            });
-            document.getElementById('richDisplay').innerHTML = html;
-            document.getElementById('kanjiDisplay').innerText = currentKanjiText;
-        }
-
-        // 4. 音声認識とその他
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         const rec = new SpeechRecognition(); rec.lang = 'ja-JP'; rec.interimResults = true;
-        document.getElementById('micBtn').onclick = () => { isRunning ? rec.stop() : rec.start(); };
         rec.onstart = () => { isRunning = true; document.getElementById('micBtn').classList.add('bg-red-500', 'pulse-red'); };
         rec.onend = () => { isRunning = false; document.getElementById('micBtn').classList.remove('bg-red-500', 'pulse-red'); };
         rec.onresult = (e) => {
@@ -143,16 +150,52 @@
                 if(d.words_all) { currentConversation.push(...d.words_all); currentKanjiText = currentConversation.map(w=>w.surface).join(''); renderEditorDisplay(); }
             } catch(e) {}
         }
+
+        function showFullPhoto(src) { document.getElementById('photoFullList').innerHTML = `<img src="${src}" class="w-full rounded-3xl shadow-2xl">`; document.getElementById('photoViewerModal').style.display = 'flex'; document.getElementById('photoViewerModal').classList.remove('hidden'); }
+
+        // 4. イベントリスナー一括登録
+        document.getElementById('btn-t1').onclick = () => openEditor('t1');
+        document.getElementById('btn-t2').onclick = () => openEditor('t2');
+        document.getElementById('btn-t3').onclick = () => openEditor('t3');
+        document.getElementById('btn-t4').onclick = () => openEditor('t4');
+        document.getElementById('btn-photo').onclick = () => document.getElementById('fileInput').click();
+        
+        document.getElementById('okEditor').onclick = () => closeEditor(true);
+        document.getElementById('cancelEditor').onclick = () => closeEditor(false);
+        document.getElementById('micBtn').onclick = () => { isRunning ? rec.stop() : rec.start(); };
         document.getElementById('backspaceBtn').onclick = () => { currentConversation.pop(); currentKanjiText = currentConversation.map(w=>w.surface).join(''); renderEditorDisplay(); };
         document.getElementById('listenBtn').onclick = () => { const u = new SpeechSynthesisUtterance(currentKanjiText); u.lang='ja-JP'; window.speechSynthesis.speak(u); };
-        function triggerPhotoInput() { document.getElementById('fileInput').click(); }
-        function showFullPhoto(src) { document.getElementById('photoFullList').innerHTML = `<img src="${src}" class="w-full rounded-3xl shadow-2xl">`; document.getElementById('photoViewerModal').classList.remove('hidden'); }
-        document.getElementById('finalSaveBtn').onclick = () => { document.getElementById('confirmModal').classList.remove('hidden'); };
-        document.getElementById('execSave').onclick = () => { location.reload(); };
-        document.getElementById('gradeMode').onchange = () => { renderTilePreviews(); if(appState.activeTileId) renderEditorDisplay(); };
 
-        // 5. 起動時実行
-        window.onload = () => { renderTilePreviews(); };
+        document.getElementById('finalSaveBtn').onclick = () => { document.getElementById('confirmModal').style.display = 'flex'; document.getElementById('confirmModal').classList.remove('hidden'); };
+        document.getElementById('cancelSave').onclick = () => { document.getElementById('confirmModal').style.display = 'none'; };
+        document.getElementById('execSave').onclick = () => { localStorage.clear(); location.reload(); };
+
+        document.getElementById('fileInput').onchange = (e) => {
+            Array.from(e.target.files).forEach(file => {
+                const r = new FileReader();
+                r.onload = (ev) => {
+                    const i = new Image();
+                    i.onload = () => {
+                        const c = document.createElement('canvas'); const m = 600;
+                        let w = i.width, h = i.height;
+                        if(w>h) { if(w>m){ h*=m/w; w=m; } } else { if(h>m){ w*=m/h; h=m; } }
+                        c.width = w; c.height = h; c.getContext('2d').drawImage(i,0,0,w,h);
+                        appState.tiles.t5.images.push(c.toDataURL('image/jpeg', 0.6)); renderPhotoGrid();
+                    };
+                    i.src = ev.target.result;
+                };
+                r.readAsDataURL(file);
+            });
+        };
+
+        // 5. 起動
+        window.onload = () => {
+            // 全てのモーダルを強制的に非表示にするガード
+            document.getElementById('confirmModal').style.display = 'none';
+            document.getElementById('editorOverlay').style.display = 'none';
+            document.getElementById('photoViewerModal').style.display = 'none';
+            renderTilePreviews();
+        };
     </script>
 </body>
 </html>
