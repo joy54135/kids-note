@@ -165,23 +165,22 @@
         }
 
         async function sendToGas(text) {
-            try {
-                const res = await fetch(`${GAS_URL}?text=${encodeURIComponent(text)}`);
-                const data = await res.json();
-                if (data.words) {
-                    const newText = data.words.join('');
-                    const start = output.selectionStart;
-                    const end = output.selectionEnd;
-                    const val = output.value;
-                    output.value = val.substring(0, start) + newText + val.substring(end);
-                    output.selectionStart = output.selectionEnd = start + newText.length;
-                    output.focus();
-                    preview.innerText = "";
-                }
-            } catch (e) {
-                preview.innerText = "エラー：通信を確認してね";
-            }
+    try {
+        const res = await fetch(`${GAS_URL}?text=${encodeURIComponent(text)}`);
+        const data = await res.json();
+        if (data.words) {
+            const newText = data.words.join('');
+            const start = output.selectionStart;
+            output.value = output.value.substring(0, start) + newText + output.value.substring(start);
+            output.selectionStart = output.selectionEnd = start + newText.length;
+            output.focus();
+            preview.innerText = "";
         }
+    } catch (e) {
+        // ★ ここを書き換え！
+        showError("エラー詳細", e.message + " (URLが正しいか確認してね)");
+    }
+}
     </script>
 </body>
 </html>
