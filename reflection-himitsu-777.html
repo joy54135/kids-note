@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>学びの足跡 v6.3</title>
+    <title>学びの足跡 v6.4</title>
     <script src="https://cdn.tailwindcss.com"></script>
     
     <script>
@@ -18,90 +18,79 @@
             editingId: null 
         };
         var isRec = false;
-        var lastInterim = ""; // 途中の言葉を覚えておく用
+        var lastInterim = "";
         var selectedSubject = "未設定";
 
-        var EMOJI_LIST = ["🌸", "⭐", "🦖", "🚀", "🦄", "👑", "💎", "🎈", "🦁", "🐬", "🍭", "🎨", "⚽", "🌈", "✨", "🐳", "🐱", "🐶", "🐰", "🐼", "🐯", "🥇", "🏆", "🎁", "🍦", "🍓", "🍎", "Fox", "🐨", "🐧", "🐝", "🍀", "🌻", "☀️", "🌙", "❄️", "🔥", "🛸", "🎮", "🛹", "🎸", "🏀", "🪄", "🐉", "🧸", "🎀", "🍬", "⚡", "🏎️", "🦅"];
+        var EMOJI_LIST = ["🌸", "⭐", "🦖", "🚀", "🦄", "👑", "💎", "🎈", "🦁", "🐬", "🍭", "🎨", "⚽", "🌈", "✨", "🐳", "🐱", "🐶", "🐰", "🐼", "🐯", "🥇", "🏆", "🎁", "🍦", "🍓", "🍎", "🦊", "🐨", "🐧", "🐝", "🍀", "🌻", "☀️", "🌙", "❄️", "🔥", "🛸", "🎮", "🛹", "🎸", "🏀", "🪄", "🐉", "🧸", "🎀", "🍬", "⚡", "🏎️", "🦅"];
         var ALL_SUBJECTS = ["国語", "算数", "生活", "理科", "社会", "音楽", "図工", "体育", "道徳", "外国語"];
 
-        // --- 2. 音声認識（停止時の変換と待ち画面対応） ---
+        // --- 2. 保存ロジック（アラート・確認なしの高速セーブ） ---
+        function getHistory() { try { var data = localStorage.getItem(STORAGE_KEY); return data ? JSON.parse(data) : []; } catch (e) { return []; } }
+
+        function startSaveProcess() {
+            if (appState.editingId) {
+                // 【再修正モード】即座に実行（教科選択なし、確認なし）
+                executeSaveAction();
+            } else {
+                // 【新規保存モード】教科選択だけ表示
+                openModal('subjectModal');
+            }
+        }
+
+        function executeSaveAction(subjectName) {
+            var history = getHistory();
+            var tilesCopy = JSON.parse(JSON.stringify(appState.tiles));
+            var badgesCopy = JSON.parse(JSON.stringify(appState.badges));
+
+            if (appState.editingId) {
+                // 上書き
+                var index = history.findIndex(function(h) { return h.id === appState.editingId; });
+                if (index !== -1) {
+                    history[index].fullData = tilesCopy;
+                    history[index].badges = badgesCopy;
+                }
+            } else {
+                // 新規
+                history.unshift({ 
+                    id: Date.now(), 
+                    date: new Date().toLocaleString('ja-JP'), 
+                    subject: subjectName || selectedSubject, 
+                    fullData: tilesCopy,
+                    badges: badgesCopy
+                });
+            }
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(history.slice(0, 30)));
+            // アラートなしで即リロード（これが保存成功の合図）
+            location.reload();
+        }
+
+        // --- 3. 音声認識とエディタ ---
         var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         var rec = SpeechRecognition ? new SpeechRecognition() : null;
-        
         if(rec) {
-            rec.lang = 'ja-JP';
-            rec.interimResults = true; // 途中の言葉も取得する
-            
-            rec.onstart = function() { 
-                isRec = true; 
-                lastInterim = "";
-                document.getElementById('micBtn').style.background = "#ef4444"; 
-                document.getElementById('micLabel').innerText = "やめる";
-            };
-            
-            rec.onend = function() { 
-                isRec = false; 
-                document.getElementById('micBtn').style.background = "#38bdf8"; 
-                document.getElementById('micLabel').innerText = "おしてね";
-                // やめた瞬間に、もし途中の言葉があれば変換に送る
-                if (lastInterim) {
-                    sendToGas(lastInterim);
-                    lastInterim = "";
-                }
-            };
-
-            rec.onresult = function(e) {
-                var interim = "";
-                for (var i = e.resultIndex; i < e.results.length; i++) {
-                    if (e.results[i].isFinal) {
-                        sendToGas(e.results[i][0].transcript);
-                        lastInterim = "";
-                    } else {
-                        interim += e.results[i][0].transcript;
-                    }
-                }
-                lastInterim = interim; // 途中の言葉を常に更新
-            };
+            rec.lang = 'ja-JP'; rec.interimResults = true;
+            rec.onstart = function() { isRec = true; lastInterim = ""; document.getElementById('micBtn').style.background = "#ef4444"; document.getElementById('micLabel').innerText = "やめる"; };
+            rec.onend = function() { isRec = false; document.getElementById('micBtn').style.background = "#38bdf8"; document.getElementById('micLabel').innerText = "おしてね"; if (lastInterim) { sendToGas(lastInterim); lastInterim = ""; } };
+            rec.onresult = function(e) { var interim = ""; for (var i = e.resultIndex; i < e.results.length; i++) { if (e.results[i].isFinal) { sendToGas(e.results[i][0].transcript); lastInterim = ""; } else { interim += e.results[i][0].transcript; } } lastInterim = interim; };
         }
 
         async function sendToGas(text) {
             if (!text || text.trim() === "") return;
-            
-            // 「ちょっとまってね」を表示
-            var loading = document.getElementById('loadingStatus');
-            loading.style.display = "flex";
-
+            document.getElementById('loadingStatus').style.display = "flex";
             try {
                 var res = await fetch(GAS_URL + '?text=' + encodeURIComponent(text));
                 var d = await res.json();
-                if(d.words_all) {
-                    appState.tiles[appState.activeId] = appState.tiles[appState.activeId].concat(d.words_all);
-                    renderEditor();
-                }
-            } catch(e) {
-                console.error(e);
-            } finally {
-                // 「ちょっとまってね」を隠す
-                loading.style.display = "none";
-            }
+                if(d.words_all) { appState.tiles[appState.activeId] = appState.tiles[appState.activeId].concat(d.words_all); renderEditor(); }
+            } catch(e) {} finally { document.getElementById('loadingStatus').style.display = "none"; }
         }
 
-        // --- 3. 画面操作系 ---
-        function openEditor(id) {
-            appState.activeId = id;
-            document.getElementById('editorOverlay').style.display = 'flex';
-            document.getElementById('editorTitle').innerText = {t1:'①めあて', t2:'②できたこと', t3:'③むずかしかった', t4:'④つぎのこと'}[id];
-            renderEditor();
-        }
-
+        // --- 4. 画面操作と描画 ---
+        function openEditor(id) { appState.activeId = id; document.getElementById('editorOverlay').style.display = 'flex'; document.getElementById('editorTitle').innerText = {t1:'①めあて', t2:'②できたこと', t3:'③むずかしかった', t4:'④つぎのこと'}[id]; renderEditor(); }
         function closeEditor(save) {
             if(save) {
                 var text = appState.tiles[appState.activeId].map(function(w){return w.surface;}).join('');
-                if (text.length > 0 && !appState.badges[appState.activeId]) {
-                    appState.badges[appState.activeId] = EMOJI_LIST[Math.floor(Math.random() * EMOJI_LIST.length)];
-                } else if (text.length === 0) {
-                    appState.badges[appState.activeId] = "";
-                }
+                if (text.length > 0 && !appState.badges[appState.activeId]) { appState.badges[appState.activeId] = EMOJI_LIST[Math.floor(Math.random() * EMOJI_LIST.length)]; }
+                else if (text.length === 0) { appState.badges[appState.activeId] = ""; }
                 refreshTiles();
             }
             document.getElementById('editorOverlay').style.display = 'none';
@@ -112,9 +101,7 @@
                 var txt = appState.tiles[id].map(function(w){return w.surface;}).join('');
                 document.getElementById('p-' + id).innerText = txt || "";
                 var badgeEl = document.getElementById('badge-' + id);
-                if (appState.badges[id] && txt.length > 0) {
-                    badgeEl.innerText = appState.badges[id]; badgeEl.style.display = "block";
-                } else { badgeEl.style.display = "none"; }
+                if (appState.badges[id] && txt.length > 0) { badgeEl.innerText = appState.badges[id]; badgeEl.style.display = "block"; } else { badgeEl.style.display = "none"; }
             });
             document.getElementById('photoGrid').innerHTML = appState.tiles.photos.map(function(src, idx) {
                 return '<div class="photo-container"><img src="' + src + '" class="photo-img-main" onclick="event.stopPropagation(); viewPhoto(\'' + src + '\')"><button class="delete-btn" onclick="event.stopPropagation(); deletePhoto(' + idx + ')">✖</button></div>';
@@ -122,51 +109,52 @@
             document.getElementById('photoLabelInner').innerText = appState.tiles.photos.length + " / 2枚";
         }
 
-        // --- 4. 履歴・保存（安定版） ---
-        function getHistory() { try { var data = localStorage.getItem(STORAGE_KEY); return data ? JSON.parse(data) : []; } catch (e) { return []; } }
+        function renderHistorySubjects() {
+            document.getElementById('historyTitle').innerText = "🎁 どの きょうかを みる？";
+            var history = getHistory();
+            document.getElementById('historyList').innerHTML = '<div class="grid grid-cols-2 gap-4">' + ALL_SUBJECTS.map(function(s) {
+                var hasData = history.some(function(h) { return h.subject === s; });
+                return hasData ? '<button onclick="viewHistoryBySubject(\'' + s + '\')" class="bg-orange-400 text-white p-6 rounded-2xl font-black text-2xl shadow-md border-4 border-white">' + s + '</button>' : '<button class="bg-gray-100 text-gray-300 p-6 rounded-2xl font-black text-2xl border-4 border-dashed border-gray-200 opacity-60">' + s + '</button>';
+            }).join('') + '</div>';
+        }
 
         function viewHistoryBySubject(subject) {
             document.getElementById('historyTitle').innerText = "🎁 " + subject + "の きろく";
             var history = getHistory();
             var filtered = history.filter(function(h) { return h.subject === subject; });
-            var list = document.getElementById('historyList');
             var html = '<button onclick="renderHistorySubjects()" class="mb-6 text-orange-400 font-black text-xl flex items-center"><span class="mr-2">⬅️</span> もどる</button>';
             filtered.forEach(function(h) {
                 var b = h.badges || {t1:"", t2:"", t3:"", t4:""};
-                html += '<div class="bg-white border-4 border-orange-100 p-6 rounded-[2.5rem] mb-6 shadow-sm"><div class="flex justify-between items-center mb-3"><div class="text-[10px] text-orange-300 font-black">' + h.date + '</div><button onclick="loadHistoryToApp(' + h.id + ')" class="bg-sky-400 text-white px-6 py-2 rounded-full text-sm font-black shadow-md active:scale-90">✎なおす</button></div><div class="space-y-2 text-lg font-black text-gray-700 leading-snug">' +
-                        '<div class="border-b border-orange-50 pb-1 flex justify-between"><span>① ' + (h.fullData.t1||[]).map(w=>w.surface).join('') + '</span><span class="text-xl">' + (b.t1||"") + '</span></div>' +
-                        '<div class="border-b border-orange-50 pb-1 flex justify-between"><span>② ' + (h.fullData.t2||[]).map(w=>w.surface).join('') + '</span><span class="text-xl">' + (b.t2||"") + '</span></div>' +
-                        '<div class="border-b border-orange-50 pb-1 flex justify-between"><span>③ ' + (h.fullData.t3||[]).map(w=>w.surface).join('') + '</span><span class="text-xl">' + (b.t3||"") + '</span></div>' +
-                        '<div class="flex justify-between"><span>④ ' + (h.fullData.t4||[]).map(w=>w.surface).join('') + '</span><span class="text-xl">' + (b.t4||"") + '</span></div>' +
+                html += '<div class="bg-white border-4 border-orange-100 p-6 rounded-[2.5rem] mb-6 shadow-sm"><div class="flex justify-between items-center mb-3"><div class="text-[10px] text-orange-300 font-black">' + h.date + '</div><button onclick="loadHistoryToApp(' + h.id + ')" class="bg-sky-400 text-white px-6 py-2 rounded-full text-sm font-black shadow-md">✎なおす</button></div><div class="space-y-2 text-lg font-black text-gray-700 leading-snug">' +
+                        '<div class="border-b border-orange-50 pb-1 flex justify-between"><span>① ' + (h.fullData.t1||[]).map(w=>w.surface).join('') + '</span><span class="text-xl">' + (b.t1||"") + '</span></div><div class="border-b border-orange-50 pb-1 flex justify-between"><span>② ' + (h.fullData.t2||[]).map(w=>w.surface).join('') + '</span><span class="text-xl">' + (b.t2||"") + '</span></div><div class="border-b border-orange-50 pb-1 flex justify-between"><span>③ ' + (h.fullData.t3||[]).map(w=>w.surface).join('') + '</span><span class="text-xl">' + (b.t3||"") + '</span></div><div class="flex justify-between"><span>④ ' + (h.fullData.t4||[]).map(w=>w.surface).join('') + '</span><span class="text-xl">' + (b.t4||"") + '</span></div>' +
                         '</div><div class="flex gap-3 mt-4 overflow-x-auto pb-2">' + (h.fullData.photos||[]).map(p => '<img src="' + p + '" class="w-24 h-24 object-cover rounded-2xl border-2 border-orange-50" onclick="viewPhoto(\'' + p + '\')">').join('') + '</div></div>';
             });
-            list.innerHTML = html;
+            document.getElementById('historyList').innerHTML = html;
         }
 
-        function executeSave() {
+        function loadHistoryToApp(historyId) {
             var history = getHistory();
-            if (appState.editingId) {
-                var index = history.findIndex(function(h) { return h.id === appState.editingId; });
-                if (index !== -1) { history[index].fullData = JSON.parse(JSON.stringify(appState.tiles)); history[index].badges = JSON.parse(JSON.stringify(appState.badges)); }
-            } else {
-                history.unshift({ id: Date.now(), date: new Date().toLocaleString('ja-JP'), subject: selectedSubject, fullData: JSON.parse(JSON.stringify(appState.tiles)), badges: JSON.parse(JSON.stringify(appState.badges)) });
+            var target = history.find(function(h) { return h.id === historyId; });
+            if(target) {
+                appState.tiles = JSON.parse(JSON.stringify(target.fullData));
+                appState.badges = JSON.parse(JSON.stringify(target.badges || { t1: "", t2: "", t3: "", t4: "" }));
+                appState.editingId = historyId;
+                refreshTiles(); closeModal('historyModal');
+                document.getElementById('saveBtnLabel').innerText = "なおして ほぞんする 💰";
+                document.getElementById('saveBtnContainer').style.background = "#38bdf8"; // スカイブルーに変更
+                document.getElementById('saveBtnContainer').style.borderColor = "#0284c7";
             }
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(history.slice(0, 30)));
-            alert('たからばこに いれたよ！'); location.reload();
         }
 
-        // --- その他基本関数 ---
+        // --- 共通パーツ ---
         function renderEditor() { var html = ""; var kanji = ""; appState.tiles[appState.activeId].forEach(function(w){ html += w.furigana || w.surface; kanji += w.surface; }); document.getElementById('richDisplay').innerHTML = html; document.getElementById('kanjiDisplay').innerText = kanji; }
-        function openModal(id) { if (id === 'subjectModal') renderSubjectGrid(); if (id === 'historyModal') renderHistorySubjects(); var m = document.getElementById(id); m.style.display = 'flex'; m.style.zIndex = "10000"; }
+        function openModal(id) { if (id === 'historyModal') renderHistorySubjects(); if (id === 'subjectModal') renderSubjectGrid(); document.getElementById(id).style.display = 'flex'; }
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-        function handlePhotos(input) { var cur = appState.tiles.photos.length; var files = Array.from(input.files); if (cur >= 2 || (cur + files.length) > 2) { alert("2枚までです"); input.value = ""; return; } files.forEach(file => { var r = new FileReader(); r.onload = e => { var i = new Image(); i.onload = () => { var c = document.createElement('canvas'); var m = 1000; var w = i.width, h = i.height; if(w > h) { if(w > m){ h *= m/w; w = m; } } else { if(h > m){ w *= m/h; h = m; } } c.width = w; c.height = h; c.getContext('2d').drawImage(i, 0, 0, w, h); appState.tiles.photos.push(c.toDataURL('image/jpeg', 0.7)); refreshTiles(); }; i.src = e.target.result; }; r.readAsDataURL(file); }); input.value = ""; }
+        function renderSubjectGrid() { document.getElementById('subjectGrid').innerHTML = ALL_SUBJECTS.map(function(s){ return '<button onclick="executeSaveAction(\'' + s + '\')" class="bg-orange-400 text-white p-6 rounded-2xl font-black text-2xl shadow-md active:scale-95">' + s + '</button>'; }).join(''); }
+        function handlePhotos(input) { var cur = appState.tiles.photos.length; var files = Array.from(input.files); if (cur >= 2 || (cur + files.length) > 2) { alert("2枚まで"); input.value = ""; return; } files.forEach(file => { var r = new FileReader(); r.onload = e => { var i = new Image(); i.onload = () => { var c = document.createElement('canvas'); var m = 1000; var w = i.width, h = i.height; if(w > h) { if(w > m){ h *= m/w; w = m; } } else { if(h > m){ w *= m/h; h = m; } } c.width = w; c.height = h; c.getContext('2d').drawImage(i, 0, 0, w, h); appState.tiles.photos.push(c.toDataURL('image/jpeg', 0.7)); refreshTiles(); }; i.src = e.target.result; }; r.readAsDataURL(file); }); input.value = ""; }
         function deletePhoto(index) { if (confirm("けす？")) { appState.tiles.photos.splice(index, 1); refreshTiles(); } }
         function viewPhoto(src) { document.getElementById('fullPhoto').src = src; document.getElementById('photoViewer').style.display = 'flex'; }
         function closePhoto() { document.getElementById('photoViewer').style.display = 'none'; }
-        function renderSubjectGrid() { document.getElementById('subjectGrid').innerHTML = ALL_SUBJECTS.map(s => '<button onclick="confirmSave(\'' + s + '\')" class="bg-orange-400 text-white p-6 rounded-2xl font-black text-2xl shadow-md active:scale-95 relative">' + s + '</button>').join(''); }
-        function confirmSave(subject) { selectedSubject = subject; closeModal('subjectModal'); document.getElementById('confirmText').innerText = subject + "に きろくする？"; openModal('confirmModal'); }
-        function loadHistoryToApp(id) { var h = getHistory(); var t = h.find(x => x.id === id); if(t && confirm("なおす？")) { appState.tiles = JSON.parse(JSON.stringify(t.fullData)); appState.badges = JSON.parse(JSON.stringify(t.badges || {t1:"",t2:"",t3:"",t4:""})); appState.editingId = id; refreshTiles(); closeModal('historyModal'); document.getElementById('saveBtnLabel').innerText = "なおして ほぞんする 💰"; } }
-        function renderHistorySubjects() { document.getElementById('historyTitle').innerText = "🎁 どの きょうか？"; var h = getHistory(); var list = document.getElementById('historyList'); list.innerHTML = '<div class="grid grid-cols-2 gap-4">' + ALL_SUBJECTS.map(s => { var has = h.some(x => x.subject === s); return has ? '<button onclick="viewHistoryBySubject(\'' + s + '\')" class="bg-orange-400 text-white p-6 rounded-2xl font-black text-2xl shadow-md active:scale-95 border-4 border-white">' + s + '</button>' : '<button class="bg-gray-100 text-gray-300 p-6 rounded-2xl font-black text-2xl border-4 border-dashed border-gray-200 opacity-60">' + s + '</button>'; }).join('') + '</div>'; }
 
         window.onload = function() { refreshTiles(); };
     </script>
@@ -179,25 +167,15 @@
         .tile-btn:active { background: #fff7ed; transform: scale(0.98); }
         .tile-preview { flex: 1; color: #4b5563; font-weight: 900; overflow: hidden; font-size: 1.4rem; line-height: 1.3; word-break: break-all; }
         #photoLabelInner { position: absolute; top: 1rem; right: 1.2rem; font-size: 0.7rem; font-weight: 900; color: #fdba74; }
-        .badge { position: absolute; bottom: 0.5rem; right: 0.5rem; font-size: 2.8rem; pointer-events: none; animation: pop-bounce 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        .badge { position: absolute; bottom: 0.5rem; right: 0.5rem; font-size: 2.8rem; pointer-events: none; animation: pop-bounce 0.6s forwards; }
         @keyframes pop-bounce { 0% { transform: scale(0); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
-
-        /* 「ちょっとまってね」のスタイル */
-        #loadingStatus {
-            position: absolute; inset: 0; background: rgba(255, 255, 255, 0.8);
-            z-index: 6000; display: none; flex-direction: column; align-items: center; justify-content: center;
-            border-radius: 2.5rem; backdrop-filter: blur(4px);
-        }
-        .wait-msg { font-size: 2.5rem; font-weight: 900; color: #fb923c; animation: float 1.5s ease-in-out infinite; }
-        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
-
-        .photo-grid-mini { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; height: 100%; padding: 4px; }
         .photo-container { position: relative; background: white; border: 2px solid #ffedd5; border-radius: 1rem; overflow: hidden; height: 100%; width: 100%; }
         .photo-img-main { width: 100%; height: 100%; object-fit: cover; }
         .delete-btn { position: absolute; top: 4px; right: 4px; background: #ef4444; color: white; width: 24px; height: 24px; border-radius: 50%; font-weight: bold; border: 2px solid white; z-index: 50; }
         .modal-bg { position: fixed; inset: 0; z-index: 10000; display: none; flex-direction: column; padding: 1.2rem; background-color: rgba(0,0,0,0.8); backdrop-filter: blur(10px); justify-content: center; align-items: center; }
         #editorOverlay { position: fixed; inset: 0; z-index: 1000; display: none; flex-direction: column; padding: 1.2rem; background: #fffbeb; }
         #richDisplay { flex: 1; background: white; border: 4px solid #ffedd5; border-radius: 2.5rem; padding: 2rem; font-size: 2.8rem; font-weight: 900; outline: none; overflow-y: auto; }
+        #loadingStatus { position: absolute; inset: 0; background: rgba(255, 255, 255, 0.8); z-index: 6000; display: none; flex-direction: column; align-items: center; justify-content: center; border-radius: 2.5rem; }
         #photoViewer { background-color: rgba(0,0,0,0.95); z-index: 99999; justify-content: center; align-items: center; cursor: pointer; pointer-events: auto; }
     </style>
 </head>
@@ -220,34 +198,27 @@
                 <input type="file" id="fileInput" accept="image/*" multiple style="display:none;" onchange="handlePhotos(this)">
             </button>
         </div>
-        <button id="saveBtnContainer" onclick="if(appState.editingId){ executeSave(); }else{ openModal('subjectModal'); }" class="w-full bg-orange-400 text-white rounded-[2rem] py-5 font-black text-3xl shadow-xl active:scale-95 shrink-0 border-b-8 border-orange-600 transition-colors">
+        <button id="saveBtnContainer" onclick="startSaveProcess()" class="w-full bg-orange-400 text-white rounded-[2rem] py-5 font-black text-3xl shadow-xl active:scale-95 shrink-0 border-b-8 border-orange-600 transition-all">
             <span id="saveBtnLabel">ぜんぶ ほぞんする 💰</span>
         </button>
     </div>
 
-    <div id="subjectModal" class="modal-bg" onclick="if(event.target===this) closeModal('subjectModal')"><div class="bg-white rounded-[3rem] p-8 w-full max-w-lg modal-content border-8 border-orange-100 text-center shadow-2xl"><h2 class="text-3xl font-black text-orange-400 mb-8">どの きょうか？</h2><div id="subjectGrid" class="grid grid-cols-2 gap-4 mb-6"></div><button onclick="closeModal('subjectModal')" class="text-gray-400 font-bold text-xl">やめる</button></div></div>
-    <div id="historyModal" class="modal-bg" onclick="if(event.target===this) closeModal('historyModal')"><div class="bg-amber-50 rounded-[3rem] p-8 w-full max-w-2xl h-[85vh] modal-content flex flex-col border-8 border-white shadow-2xl"><h2 id="historyTitle" class="text-3xl font-black text-orange-400 mb-6 text-center italic">🎁 きろく</h2><div id="historyList" class="flex-1 overflow-y-auto pr-2"></div><button onclick="closeModal('historyModal')" class="w-full mt-6 bg-orange-400 text-white py-5 rounded-[2rem] font-black text-2xl">とじる</button></div></div>
-    <div id="confirmModal" class="modal-bg" onclick="if(event.target===this) closeModal('confirmModal')"><div class="bg-white rounded-[3rem] p-12 w-full max-w-sm modal-content border-8 border-orange-400 text-center"><p id="confirmText" class="text-3xl font-black text-gray-700 mb-10"></p><div class="flex gap-4"><button onclick="closeModal('confirmModal')" class="flex-1 bg-gray-100 py-5 rounded-2xl font-black text-gray-400 text-xl">いいえ</button><button onclick="executeSave()" class="flex-1 bg-orange-500 py-5 rounded-2xl font-black text-white text-xl shadow-lg">はい！</button></div></div></div>
-    <div id="photoViewer" class="fixed inset-0" style="display: none;" onclick="closePhoto()"><img id="fullPhoto" class="max-w-[95%] max-h-[85%] object-contain rounded-2xl border-4 border-white shadow-2xl"><p class="text-white font-bold mt-6 text-xl text-center">タップして とじる</p></div>
+    <div id="subjectModal" class="modal-bg" onclick="if(event.target===this) closeModal('subjectModal')">
+        <div class="bg-white rounded-[3rem] p-8 w-full max-w-lg border-8 border-orange-100 text-center shadow-2xl">
+            <h2 class="text-3xl font-black text-orange-400 mb-8">どの きょうか？</h2>
+            <div id="subjectGrid" class="grid grid-cols-2 gap-4 mb-6"></div>
+            <button onclick="closeModal('subjectModal')" class="text-gray-400 font-bold text-xl text-center">やめる</button>
+        </div>
+    </div>
+
+    <div id="historyModal" class="modal-bg" onclick="if(event.target===this) closeModal('historyModal')"><div class="bg-amber-50 rounded-[3rem] p-8 w-full max-w-2xl h-[85vh] flex flex-col border-8 border-white shadow-2xl"><h2 id="historyTitle" class="text-3xl font-black text-orange-400 mb-6 text-center italic">🎁 きろく</h2><div id="historyList" class="flex-1 overflow-y-auto pr-2"></div><button onclick="closeModal('historyModal')" class="w-full mt-6 bg-orange-400 text-white py-5 rounded-[2rem] font-black text-2xl">とじる</button></div></div>
+    <div id="photoViewer" class="fixed inset-0" style="display: none;" onclick="closePhoto()"><img id="fullPhoto" class="max-w-[95%] max-h-[85%] object-contain rounded-2xl border-4 border-white shadow-2xl"><p class="text-white font-bold mt-6 text-xl text-center animate-bounce">タップして とじる</p></div>
 
     <div id="editorOverlay">
-        <div class="flex justify-between items-center mb-4 px-2">
-            <button onclick="closeEditor(false)" class="text-gray-400 font-black text-2xl p-2">✖ やめる</button>
-            <div id="editorTitle" class="text-orange-400 font-black text-3xl">編集</div>
-            <button onclick="closeEditor(true)" class="bg-orange-400 text-white px-12 py-4 rounded-full font-black text-2xl shadow-lg">決定</button>
-        </div>
-        <div class="flex-1 relative flex flex-col min-h-0">
-            <div id="loadingStatus">
-                <div class="wait-msg">ちょっとまってね🪄</div>
-                <div class="text-orange-300 font-bold mt-2">AIが文字に なおしているよ</div>
-            </div>
-            <div id="richDisplay" contenteditable="true" class="shadow-inner"></div>
-        </div>
+        <div class="flex justify-between items-center mb-4 px-2"><button onclick="closeEditor(false)" class="text-gray-400 font-black text-2xl p-2">✖ やめる</button><div id="editorTitle" class="text-orange-400 font-black text-3xl">編集</div><button onclick="closeEditor(true)" class="bg-orange-400 text-white px-12 py-4 rounded-full font-black text-2xl shadow-lg">決定</button></div>
+        <div class="flex-1 relative flex flex-col min-h-0"><div id="loadingStatus" class="flex flex-col items-center justify-center"><div class="text-3xl font-black color-[#fb923c] animate-bounce">ちょっとまってね🪄</div></div><div id="richDisplay" contenteditable="true" class="shadow-inner"></div></div>
         <div id="kanjiDisplay" class="text-lg text-gray-300 italic font-bold mt-2 px-4 opacity-50"></div>
-        <div class="grid grid-cols-2 gap-6 mt-6">
-            <button id="micBtn" onclick="if(rec) isRec ? rec.stop() : rec.start()" class="bg-sky-400 rounded-[2rem] py-8 text-white font-black text-4xl shadow-xl active:scale-95 transition-all"><span id="micLabel">おしてね</span></button>
-            <button onclick="appState.tiles[appState.activeId].pop(); renderEditor();" class="bg-white border-4 border-orange-100 rounded-[2rem] py-8 text-orange-400 font-black text-4xl shadow-md">1字けす</button>
-        </div>
+        <div class="grid grid-cols-2 gap-6 mt-6 pointer-events-auto"><button id="micBtn" onclick="if(rec) isRec ? rec.stop() : rec.start()" class="bg-sky-400 rounded-[2rem] py-8 text-white font-black text-4xl shadow-xl active:scale-95 transition-all"><span id="micLabel">おしてね</span></button><button onclick="appState.tiles[appState.activeId].pop(); renderEditor();" class="bg-white border-4 border-orange-100 rounded-[2rem] py-8 text-orange-400 font-black text-4xl shadow-md">1字けす</button></div>
     </div>
 
 </body>
