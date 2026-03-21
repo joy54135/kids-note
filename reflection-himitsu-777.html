@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ひらがな めがね Ver.14.0</title>
+    <title>ひらがな めがね Ver.16.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @keyframes pop { 0% { transform: scale(0.5) opacity: 0; } 100% { transform: scale(1) opacity: 1; } }
@@ -34,8 +34,7 @@
     </div>
 
     <script>
-        // ★ここにGASの最新URLを貼り付けてください
-        const GAS_URL = 'https://script.google.com/macros/s/AKfycbzfFhQEVv5dMzy_cgQ3oLWp_wi_kkb11XhZlte5zad2Gl4Nsj1Vi13A2W6rR0SjCSpA/exec'; 
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbykSKbXDr3cJZxPVD2v6Eia5zBjvwggT65HpTJqDRl6UQwLOMp8YaTShmuNvvy1BGrr/exec'; 
         
         const sounds = {
             start: new Audio('https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3'),
@@ -57,7 +56,7 @@
         } else {
             const recognition = new SpeechRecognition();
             recognition.lang = 'ja-JP';
-            recognition.interimResults = true; // リアルタイムで文字を出す
+            recognition.interimResults = true;
 
             micBtn.onclick = () => {
                 if (!isRunning) {
@@ -66,7 +65,7 @@
                     try { recognition.start(); } catch(e) {}
                 } else {
                     sounds.stop.play().catch(() => {});
-                    recognition.stop(); // 停止すると onresult が確定して送信されます
+                    recognition.stop();
                     btnLabel.innerText = "WAIT...";
                 }
             };
