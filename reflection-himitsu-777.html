@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>学びの足跡 v8.6</title>
+    <title>学びの足跡 v8.7</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { height: 100dvh; background-color: #fffbeb; margin: 0; display: flex; flex-direction: column; overflow: hidden; font-family: sans-serif; }
@@ -20,7 +20,6 @@
         #editorOverlay { position: fixed; inset: 0; background-color: #fffbeb; z-index: 999999; display: none; flex-direction: column; padding: 1.2rem; }
         #editorOverlay.active { display: flex; }
         
-        /* エディタ下部ボタンレイアウト：ご要望通り「話す」を中央最大に */
         .editor-bottom-nav { 
             display: grid; 
             grid-template-columns: 0.7fr 0.7fr 1.8fr 1.2fr; 
@@ -37,7 +36,6 @@
         
         input { border: 4px solid #fed7aa; border-radius: 1.5rem; padding: 1rem; width: 100%; font-size: 1.5rem; font-weight: 900; text-align: center; outline: none; margin-bottom: 1rem; }
         .badge { position: absolute; bottom: 0.5rem; right: 0.5rem; font-size: 2.8rem; pointer-events: none; animation: pop-bounce 0.6s forwards; }
-        @keyframes pop-bounce { 0% { transform: scale(0); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
         
         #richDisplay { flex: 1; background: white; border: 4px solid #ffedd5; border-radius: 2.5rem; padding: 2rem; font-size: 2.8rem; font-weight: 900; outline: none; overflow-y: auto; color: #374151; line-height: 1.2; }
         .btn-active-state:active { opacity: 0.8; transform: scale(0.95); }
@@ -49,6 +47,7 @@
 
         .mic-recording { animation: mic-pulse 1.5s infinite; background-color: #ef4444 !important; border-bottom: 8px solid #b91c1c !important; }
         @keyframes mic-pulse { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 70% { box-shadow: 0 0 0 20px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
+        @keyframes pop-bounce { 0% { transform: scale(0); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
     </style>
 
     <script>
@@ -57,7 +56,6 @@
         const TEACHER_CODE = "702070";
         const GAS_URL = 'https://script.google.com/macros/s/AKfycbxxE14tNshFIqZHwzhyGQtRDeSazD9aPex9Tm0gIGJjmUvd8jAiFN-bkQyNIt_D9cV_/exec';
 
-        // 漢字リスト (1〜6年生配当漢字)
         const KANJI_LISTS = {
             1: "一右雨円王音下火花貝学気九休玉金空月犬見五口校左三山子四糸字耳七車手十出女小上森人水正生青夕石赤千川先早草足村大男竹中虫町天田土二日入年白八百文木本名目立力林六",
             2: "引羽雲園遠何科夏家歌画回会海絵外角楽活間丸岩顔汽記帰弓牛魚京強教近兄形計元言原戸古午後語工公広交光考行高黄合谷国黒今才細作算止市矢姉思紙寺自時室社弱首秋週春書少場色食心新親図数西声星晴切雪船線前組走多太体台地池知茶昼長鳥朝直通弟店点電刀冬当東答頭同道読内南肉馬売買麦半番父風分聞米歩母方北毎妹万明鳴毛門夜野友用曜来里理話",
@@ -67,12 +65,12 @@
             6: "胃異遺域宇映延沿順我灰拡革閣割株干巻看簡危机揮貴疑吸供胸郷勤筋系敬警劇激穴券絹権憲源厳己呼誤后孝皇紅降鋼刻穀骨困砂座済裁策冊蚕至私姿視詞誌磁射捨尺若樹収宗就衆従縦縮熟純処署諸除承将傷障蒸針仁垂推寸盛聖誠舌宣専泉洗染銭善奏窓創装層操蔵臓存尊退宅担探誕段暖値宙忠著庁頂腸潮賃痛敵展討党糖届難乳認納脳派拝背肺俳班晩否批秘俵腹奮並陛閉片補暮宝訪亡忘棒枚幕密盟模訳郵優預幼欲翌乱卵覧裏律臨朗論"
         };
 
-        // UI表示用の単語リスト（漢字レベルに合わせて変換）
-        const UI_WORDS = {
-            "学びの足跡": "まなびのあしあと", "記録をみる": "きろくをみる", "設定": "せってい", "全部けす": "ぜんぶけす", "全部消す": "ぜんぶけす",
+        const UI_TEXTS = {
+            "記録": "きろく", "設定": "せってい", "学びの足跡": "まなびのあしあと", "全部けす": "ぜんぶけす", "全部消す": "ぜんぶけす",
             "話す": "はなす", "決定": "けってい", "やめる": "やめる", "1字消す": "1じけす", "保存しました！": "ほぞんしました！",
             "どの きょうか？": "どの きょうか？", "①めあて": "①めあて", "②できたこと": "②できたこと", "③むずかしかった": "③むずかしかった", "④つぎのこと": "④つぎのこと", "しゃしん": "しゃしん",
-            "ぜんぶ ほぞんする 💎": "ぜんぶ ほぞんする 💎", "なおして ほぞんする 💎": "なおして ほぞんする 💎"
+            "ぜんぶ ほぞんする 💎": "ぜんぶ ほぞんする 💎", "なおして ほぞんする 💎": "なおして ほぞんする 💎",
+            "なおす": "なおす", "きろくをみる": "きろくをみる", "へんかん中...": "へんかん中...", "とじる": "とじる"
         };
 
         let appState = { 
@@ -80,15 +78,14 @@
             tiles: { t1: [], t2: [], t3: [], t4: [], photos: [] },
             badges: { t1: "", t2: "", t3: "", t4: "" },
             editingId: null, user: null, isDeleteMode: false,
-            gradeMode: 1 // デフォルト1年生モード
+            gradeMode: 1 
         };
 
         const ALL_SUBJECTS = ["国語", "算数", "生活", "理科", "社会", "音楽", "図工", "体育", "道徳", "外国語"];
-        const EMOJI_LIST = ["🌸", "⭐", "🦖", "🚀", "🦄", "👑", "💎", "🎈", "🦁", "🐬", "🍭", "🎨", "⚽", "🌈", "✨", "🐶", "🐰", "🐼", "🐯"];
+        const EMOJI_LIST = ["🌸", "⭐", "🦖", "🚀", "🦄", "👑", "💎", "🎈", "🦁", "🐬", "🍭", "🎨", "⚽", "🌈", "✨", "🐱", "🐶", "🐰", "🐼", "🐯"];
 
         window.onload = function() { checkAuth(); refreshMainView(); };
 
-        // --- 漢字表示ロジック ---
         function isKanji(ch) { return (ch >= '\u4e00' && ch <= '\u9faf'); }
         function getAllowedKanji(lv) {
             if (lv === 0) return "";
@@ -100,7 +97,7 @@
             if (lv === 99) return text;
             let result = text;
             const allowed = getAllowedKanji(lv);
-            for (let [kanji, hira] of Object.entries(UI_WORDS)) {
+            for (let [kanji, hira] of Object.entries(UI_TEXTS)) {
                 if (result.includes(kanji)) {
                     let canKeep = true;
                     if (allowed === "") canKeep = false;
@@ -129,11 +126,11 @@
             });
             document.getElementById('appTitle').innerText = convertUI("学びの足跡", lv);
             document.getElementById('historyBtnLabel').innerText = convertUI("記録をみる", lv);
+            document.getElementById('loadingText').innerText = convertUI("へんかん中...", lv);
             const saveText = appState.editingId ? "なおして ほぞんする 💎" : "ぜんぶ ほぞんする 💎";
             document.getElementById('saveBtnLabel').innerText = convertUI(saveText, lv);
         }
 
-        // --- 認証 ---
         function checkAuth() {
             var auth = localStorage.getItem(AUTH_KEY);
             if (!auth) { 
@@ -150,23 +147,14 @@
         function register() { var c = document.getElementById('regClass').value; var n = document.getElementById('regNo').value; var p = document.getElementById('regPass').value; if(!c || !n || !p) return alert("ぜんぶ いれてね！"); appState.user = { class: c, no: n, pass: p }; localStorage.setItem(AUTH_KEY, JSON.stringify(appState.user)); document.getElementById('authOverlay').classList.remove('active'); refreshMainView(); }
         function changeGrade(val) { appState.gradeMode = parseInt(val); refreshMainView(); }
 
-        // --- 音声入力 ---
         var SpeechRecognition = window.webkitSpeechRecognition || window.SpeechRecognition;
         var rec = SpeechRecognition ? new SpeechRecognition() : null;
         var isRec = false;
 
         if(rec) {
             rec.lang = 'ja-JP'; rec.interimResults = true;
-            rec.onstart = function() { 
-                isRec = true; 
-                document.getElementById('micBtn').classList.add('mic-recording');
-                document.getElementById('micLabel').innerText = convertUI("やめる", appState.gradeMode); 
-            };
-            rec.onend = function() { 
-                isRec = false; 
-                document.getElementById('micBtn').classList.remove('mic-recording');
-                document.getElementById('micLabel').innerText = convertUI("話す", appState.gradeMode); 
-            };
+            rec.onstart = function() { isRec = true; document.getElementById('micBtn').classList.add('mic-recording'); document.getElementById('micLabel').innerText = convertUI("やめる", appState.gradeMode); };
+            rec.onend = function() { isRec = false; document.getElementById('micBtn').classList.remove('mic-recording'); document.getElementById('micLabel').innerText = convertUI("話す", appState.gradeMode); };
             rec.onresult = function(e) { for(var i=e.resultIndex; i<e.results.length; i++) if(e.results[i].isFinal) sendToGas(e.results[i][0].transcript); };
         }
 
@@ -183,9 +171,8 @@
             } catch(e){} finally { document.getElementById('loadingStatus').style.display = "none"; }
         }
 
-        function handleMicAction() { if(!rec) return alert("マイクが つかえません"); try { if (isRec) rec.stop(); else rec.start(); } catch(e) { rec.stop(); } }
+        function handleMicAction() { if(!rec) return alert("マイクが使えません"); try { if (isRec) rec.stop(); else rec.start(); } catch(e) { rec.stop(); } }
 
-        // --- 画面描画 ---
         function refreshMainView() {
             updateLabels();
             ['t1','t2','t3','t4'].forEach(id => {
@@ -238,9 +225,9 @@
         function startSaveProcess() {
             if (appState.isDeleteMode) { if(confirm("消しますか？")) executeDeletion(); return; }
             let hasContent = false;
-            ['t1','t2','t3','t4'].forEach(k => { if(appState.tiles[k].length > 0) hasContent = true; });
+            ['t1','t2','t3','t4'].forEach(k => { if(appState.tiles[k] && appState.tiles[k].length > 0) hasContent = true; });
             if (appState.tiles.photos.length > 0) hasContent = true;
-            if (!hasContent) return alert("まだ なにも ありません");
+            if (!hasContent) return alert("まだなにもありません");
             if (appState.editingId) executeFinalSave(null); else openModal('subjectModal');
         }
 
@@ -249,7 +236,7 @@
             const entry = { 
                 id: appState.editingId || Date.now(), 
                 date: new Date().toLocaleString('ja-JP'), 
-                subject: subject || "修正", 
+                subject: subject || (appState.editingId ? h.find(x => x.id === appState.editingId).subject : "国語"), 
                 fullData: JSON.parse(JSON.stringify(appState.tiles)), 
                 badges: JSON.parse(JSON.stringify(appState.badges)), 
                 user: appState.user 
@@ -259,22 +246,14 @@
                 if(idx !== -1) h[idx] = entry; 
             } else h.unshift(entry);
             
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(h.slice(0, 10)));
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(h.slice(0, 15)));
             alert(convertUI("保存しました！", appState.gradeMode));
             resetAll(true);
             closeModal('subjectModal');
         }
 
-        function executeDeletion() {
-            const h = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-            const newH = h.filter(x => x.id !== appState.editingId);
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(newH));
-            alert("消しました！");
-            resetAll(true);
-        }
-
         function resetAll(silent) {
-            if(silent || confirm("ぜんぶ けしますか？")) {
+            if(silent || confirm("ぜんぶ消しますか？")) {
                 appState.tiles = { t1: [], t2: [], t3: [], t4: [], photos: [] };
                 appState.badges = { t1: "", t2: "", t3: "", t4: "" };
                 appState.editingId = null;
@@ -298,17 +277,21 @@
             const h = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
             const list = document.getElementById('historyList');
             document.getElementById('historyTitle').innerText = convertUI("記録", appState.gradeMode);
-            list.innerHTML = h.length ? "" : "<p class='text-center mt-10 text-gray-400'>きろくが ありません</p>";
+            list.innerHTML = h.length ? "" : "<p class='text-center mt-10 text-gray-400'>記録がありません</p>";
             h.forEach(item => {
                 const div = document.createElement('div');
-                div.className = "bg-white border-4 border-orange-100 p-4 rounded-3xl mb-4 shadow-sm active:scale-95 transition-all";
+                div.className = "bg-white border-4 border-orange-100 p-6 rounded-[2.5rem] mb-6 shadow-sm";
+                const displaySubject = convertUI(item.subject, appState.gradeMode);
+                const displayText = Object.keys(item.fullData).filter(k => k!=='photos').map(k => (item.fullData[k]||[]).map(w => convertWord(w, appState.gradeMode)).join('')).filter(t => t!=='').join(' ');
+                const btnLabel = convertUI("なおす", appState.gradeMode);
+                
                 div.innerHTML = `
-                    <div class="flex justify-between items-center mb-2">
-                        <span class="bg-orange-400 text-white px-3 py-1 rounded-full text-xs font-bold">${convertUI(item.subject, appState.gradeMode)}</span>
-                        <span class="text-[10px] text-gray-400">${item.date}</span>
+                    <div class="flex justify-between items-center mb-4">
+                        <span class="bg-orange-400 text-white px-4 py-1 rounded-full text-sm font-bold">${displaySubject}</span>
+                        <span class="text-[10px] text-gray-400 font-bold">${item.date}</span>
                     </div>
-                    <div class="text-xs text-gray-600 line-clamp-1">${item.fullData.t1.map(w=>w.surface).join('')}</div>
-                    <button onclick="loadToApp(${item.id})" class="w-full mt-3 bg-sky-400 text-white py-2 rounded-xl text-sm font-bold">✎なおす</button>
+                    <div class="text-lg font-black text-gray-700 line-clamp-3 mb-4 leading-snug">${displayText}</div>
+                    <button onclick="loadToApp(${item.id})" class="w-full bg-sky-400 text-white py-3 rounded-2xl text-lg font-black shadow-sm flex items-center justify-center gap-2">✎ ${btnLabel}</button>
                 `;
                 list.appendChild(div);
             });
@@ -330,7 +313,7 @@
 
         async function handlePhotos(input) {
             const fs = Array.from(input.files);
-            if(appState.tiles.photos.length + fs.length > 2) return alert("しゃしんは 2まい までです");
+            if(appState.tiles.photos.length + fs.length > 2) return alert("2枚までです");
             for(let f of fs) {
                 const src = await new Promise(r => { 
                     const rd = new FileReader(); 
@@ -342,7 +325,7 @@
             refreshMainView();
             input.value = "";
         }
-        function deletePhoto(i) { appState.tiles.photos.splice(i,1); refreshMainView(); }
+        function deletePhoto(i) { if(confirm("消しますか？")) { appState.tiles.photos.splice(i,1); refreshMainView(); } }
         function viewPhoto(s) { document.getElementById('fullPhoto').src = s; openModal('photoViewerOverlay'); }
     </script>
 </head>
@@ -369,17 +352,7 @@
             <span id="historyBtnLabel" class="text-xs font-black text-orange-400 italic">記録をみる</span>
         </button>
         <h1 id="appTitle" class="text-xl font-black text-orange-400 tracking-tighter text-center flex-1">学びの足跡</h1>
-        
-        <select onchange="changeGrade(this.value)" class="bg-orange-400 text-white font-black text-[10px] px-3 py-1 rounded-full border-2 border-white shadow-sm outline-none appearance-none">
-            <option value="0">ひらがな</option>
-            <option value="1" selected>1ねんせい</option>
-            <option value="2">2ねんせい</option>
-            <option value="3">3ねんせい</option>
-            <option value="4">4ねんせい</option>
-            <option value="5">5ねんせい</option>
-            <option value="6">6ねんせい</option>
-            <option value="99">かんじ全部</option>
-        </select>
+        <button onclick="openModal('settingsModal')" class="bg-orange-100 border border-orange-200 rounded-full w-10 h-10 flex items-center justify-center text-xl shadow-sm active:scale-95">⚙️</button>
     </div>
 
     <div id="mainContentArea" class="main-container">
@@ -409,7 +382,9 @@
             <div class="w-20"></div> 
         </div>
         <div class="flex-1 relative flex flex-col min-h-0">
-            <div id="loadingStatus" style="display:none;" class="absolute inset-0 bg-white/80 z-[6000] flex flex-col items-center justify-center rounded-[2.5rem]"><div class="text-3xl font-black text-orange-400 animate-bounce">🪄</div></div>
+            <div id="loadingStatus" style="display:none;" class="absolute inset-0 bg-white/80 z-[6000] flex flex-col items-center justify-center rounded-[2.5rem]">
+                <div id="loadingText" class="text-3xl font-black text-orange-400 animate-bounce">へんかん中...</div>
+            </div>
             <div id="richDisplay"></div>
         </div>
         
@@ -425,6 +400,26 @@
         </div>
     </div>
 
+    <div id="settingsModal" class="modal-bg" onclick="if(event.target===this) closeModal('settingsModal')">
+        <div class="modal-content text-center shadow-2xl">
+            <h2 data-label="設定" class="text-2xl font-black text-orange-400 mb-6 italic"></h2>
+            <div class="bg-orange-50 p-6 rounded-3xl mb-6">
+                <p class="text-sm font-bold text-gray-400 mb-4 italic">かんじの レベル</p>
+                <select onchange="changeGrade(this.value); closeModal('settingsModal')" class="w-full bg-white border-4 border-orange-200 rounded-2xl p-4 text-xl font-black text-orange-500 outline-none">
+                    <option value="0">ひらがな・カタカナ</option>
+                    <option value="1" selected>1ねんせい</option>
+                    <option value="2">2ねんせい</option>
+                    <option value="3">3ねんせい</option>
+                    <option value="4">4ねんせい</option>
+                    <option value="5">5ねんせい</option>
+                    <option value="6">6ねんせい</option>
+                    <option value="99">かんじ全部</option>
+                </select>
+            </div>
+            <button onclick="closeModal('settingsModal')" data-label="とじる" class="text-gray-400 font-bold">とじる</button>
+        </div>
+    </div>
+
     <div id="subjectModal" class="modal-bg" onclick="if(event.target===this) closeModal('subjectModal')">
         <div class="modal-content text-center shadow-2xl">
             <h2 data-label="どの きょうか？" class="text-2xl font-black text-orange-400 mb-6 italic"></h2>
@@ -437,13 +432,13 @@
         <div class="modal-content h-[85vh] flex flex-col max-w-2xl overflow-hidden shadow-2xl">
             <h2 id="historyTitle" class="text-3xl font-black text-orange-400 mb-6 text-center italic"></h2>
             <div id="historyList" class="flex-1 overflow-y-auto pr-2"></div>
-            <button onclick="closeModal('historyModal')" data-label="やめる" class="w-full mt-6 bg-gray-100 text-gray-400 py-5 rounded-[2rem] font-black text-2xl italic">とじる</button>
+            <button onclick="closeModal('historyModal')" data-label="とじる" class="w-full mt-6 bg-gray-100 text-gray-400 py-5 rounded-[2rem] font-black text-2xl italic">とじる</button>
         </div>
     </div>
 
     <div id="photoViewerOverlay" class="modal-bg" onclick="closeModal('photoViewerOverlay')" style="background-color:rgba(0,0,0,0.95);">
         <img id="fullPhoto" class="max-w-[95%] max-h-[85%] object-contain rounded-2xl border-4 border-white shadow-2xl">
-        <p class="text-white font-black mt-6 text-xl animate-bounce">タップして とじる</p>
+        <p class="text-white font-black mt-6 text-xl animate-bounce italic">タップして とじる</p>
     </div>
 
 </body>
