@@ -3,44 +3,45 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>学びの足跡 v5.2</title>
+    <title>学びの足跡 v5.3</title>
     <script src="https://cdn.tailwindcss.com"></script>
     
     <script>
         // --- データ管理 ---
         var GAS_URL = 'https://script.google.com/macros/s/AKfycbxxE14tNshFIqZHwzhyGQtRDeSazD9aPex9Tm0gIGJjmUvd8jAiFN-bkQyNIt_D9cV_/exec';
-        
-        // アプリの状態
         var appState = { 
             activeId: "", 
             tiles: { t1: [], t2: [], t3: [], t4: [], photos: [] },
-            editingId: null,   // なおしている記録のID
-            originalDate: null // なおしている記録の元の日付
+            editingId: null, 
+            originalDate: null 
         };
         var isRec = false;
         var selectedSubject = "";
 
-        // 編集画面を開く
+        // --- 画面操作（z-indexとpointerEventsの徹底管理） ---
         function openEditor(id) {
             appState.activeId = id;
             var overlay = document.getElementById('editorOverlay');
             overlay.style.display = 'flex';
             overlay.style.pointerEvents = 'auto';
+            overlay.style.zIndex = "5000"; // 編集画面を上に
             document.getElementById('editorTitle').innerText = {t1:'①めあて', t2:'②できたこと', t3:'③むずかしかった', t4:'④つぎのこと'}[id];
             renderEditor();
         }
 
         function closeEditor(save) {
-            document.getElementById('editorOverlay').style.display = 'none';
-            document.getElementById('editorOverlay').style.pointerEvents = 'none';
+            var overlay = document.getElementById('editorOverlay');
+            overlay.style.display = 'none';
+            overlay.style.pointerEvents = 'none';
+            overlay.style.zIndex = "1";
             if(save) refreshTiles();
         }
 
-        // モーダル管理
         function openModal(id) {
             var m = document.getElementById(id);
             m.style.display = 'flex';
-            m.style.pointerEvents = 'auto'; // 触れるようにする
+            m.style.pointerEvents = 'auto';
+            m.style.zIndex = "10000"; // モーダルを最前面に
             if(id === 'subjectModal') renderSubjectGrid('save');
             if(id === 'historyModal') renderHistorySubjects();
         }
@@ -48,23 +49,61 @@
         function closeModal(id) {
             var m = document.getElementById(id);
             m.style.display = 'none';
-            m.style.pointerEvents = 'none'; // 触れないようにする
+            m.style.pointerEvents = 'none';
+            m.style.zIndex = "1";
         }
 
-        // --- 保存ロジック（上書き対応） ---
-        function executeSave() {
-            var history = JSON.parse(localStorage.getItem('furi_v52_history') || '[]');
-            
-            if (appState.editingId) {
-                // 【再修正モード】元の場所を探して入れ替える
-                var index = history.findIndex(h => h.id === appState.editingId);
-                if (index !== -1) {
-                    history[index].fullData = JSON.parse(JSON.stringify(appState.tiles));
-                    // 日付(date)と教科(subject)はそのまま維持
+        // --- 写真処理（2枚制限・高画質維持） ---
+        function handlePhotos(input) {
+            var files = Array.from(input.files);
+            files.forEach(function(file) {
+                // 3枚目は選べないようにする
+                if(appState.tiles.photos.length >= 2) {
+                    alert("しゃしんは 2枚まで です。");
+                    return;
                 }
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    var img = new Image();
+                    img.onload = function() {
+                        var canvas = document.createElement('canvas');
+                        var max = 1000; // 拡大に耐えられるサイズにアップ
+                        var w = img.width, h = img.height;
+                        if(w > h) { if(w > max){ h *= max/w; w = max; } } else { if(h > max){ w *= max/h; h = max; } }
+                        canvas.width = w; canvas.height = h;
+                        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                        appState.tiles.photos.push(canvas.toDataURL('image/jpeg', 0.7));
+                        refreshTiles();
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+            input.value = ""; // 連続選択可能にリセット
+        }
+
+        function viewPhoto(src) {
+            var viewer = document.getElementById('photoViewer');
+            document.getElementById('fullPhoto').src = src;
+            viewer.style.display = 'flex';
+            viewer.style.zIndex = "99999"; // 全ての要素の頂点へ
+            viewer.style.pointerEvents = 'auto';
+        }
+
+        function closePhoto() {
+            var viewer = document.getElementById('photoViewer');
+            viewer.style.display = 'none';
+            viewer.style.pointerEvents = 'none';
+        }
+
+        // --- 保存・履歴ロジック ---
+        function executeSave() {
+            var history = JSON.parse(localStorage.getItem('furi_v53_history') || '[]');
+            if (appState.editingId) {
+                var index = history.findIndex(h => h.id === appState.editingId);
+                if (index !== -1) history[index].fullData = JSON.parse(JSON.stringify(appState.tiles));
                 alert('きろくを なおしたよ！');
             } else {
-                // 【新規保存モード】新しく上に追加
                 var newEntry = {
                     id: Date.now(),
                     date: new Date().toLocaleString('ja-JP'),
@@ -74,80 +113,29 @@
                 history.unshift(newEntry);
                 alert('たからばこに いれたよ！');
             }
-            
-            localStorage.setItem('furi_v52_history', JSON.stringify(history.slice(0, 30)));
+            localStorage.setItem('furi_v53_history', JSON.stringify(history.slice(0, 30)));
             location.reload();
         }
 
-        // 過去の記録をアプリに呼び出す
-        function loadHistoryToApp(historyId) {
-            if(!confirm("この きろくを なおしますか？")) return;
-            var history = JSON.parse(localStorage.getItem('furi_v52_history') || '[]');
-            var target = history.find(h => h.id === historyId);
-            if(target) {
-                appState.tiles = JSON.parse(JSON.stringify(target.fullData));
-                appState.editingId = target.id;      // IDを記憶
-                appState.originalDate = target.date; // 日付を記憶
-                refreshTiles();
-                closeModal('historyModal');
-                alert(target.subject + "の きろくを よびだしたよ！\nなおしたら「ほぞん」してね。");
-                document.getElementById('saveBtnLabel').innerText = "なおして ほぞんする 💰";
-            }
-        }
-
-        // --- 描画・写真 ---
-        function viewPhoto(src) {
-            var modal = document.getElementById('photoViewer');
-            document.getElementById('fullPhoto').src = src;
-            modal.style.display = 'flex';
-            modal.style.pointerEvents = 'auto'; // 確実にクリックを奪う
-        }
-
-        function closePhoto() {
-            var modal = document.getElementById('photoViewer');
-            modal.style.display = 'none';
-            modal.style.pointerEvents = 'none';
-        }
-
-        function handlePhotos(input) {
-            Array.from(input.files).forEach(file => {
-                if(appState.tiles.photos.length >= 2) return;
-                var reader = new FileReader();
-                reader.onload = function(e) {
-                    var img = new Image();
-                    img.onload = function() {
-                        var canvas = document.createElement('canvas');
-                        var max = 500; var w = img.width, h = img.height;
-                        if(w > h) { if(w > max){ h *= max/w; w = max; } } else { if(h > max){ w *= max/h; h = max; } }
-                        canvas.width = w; canvas.height = h;
-                        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-                        appState.tiles.photos.push(canvas.toDataURL('image/jpeg', 0.6));
-                        refreshTiles();
-                    };
-                    img.src = e.target.result;
-                };
-                reader.readAsDataURL(file);
-            });
-        }
-
-        function refreshTiles() {
-            ['t1','t2','t3','t4'].forEach(id => {
-                var txt = appState.tiles[id].map(w => w.surface).join('');
-                document.getElementById('p-' + id).innerText = txt || "";
-            });
-            var photoGrid = document.getElementById('photoGrid');
-            photoGrid.innerHTML = appState.tiles.photos.map(src => `
-                <div class="bg-gray-50 rounded-xl overflow-hidden flex items-center justify-center p-1 border border-orange-50 h-full">
-                    <img src="${src}" class="max-w-full max-h-full object-contain rounded-md" onclick="event.stopPropagation(); viewPhoto('${src}')">
-                </div>
+        function renderSubjectGrid(mode) {
+            var grid = document.getElementById('subjectGrid');
+            var subjects = ["国語", "算数", "生活", "理科", "社会", "音楽", "図工", "体育", "道徳", "外国語"];
+            grid.innerHTML = subjects.map(s => `
+                <button onclick="${mode === 'save' ? `confirmSave('${s}')` : `viewHistoryBySubject('${s}')`}" 
+                class="bg-orange-400 text-white p-5 rounded-2xl font-black text-2xl shadow-md active:scale-95 z-[10001] relative">${s}</button>
             `).join('');
-            document.getElementById('photoLabel').innerText = appState.tiles.photos.length + " / 2枚";
         }
 
-        // 履歴表示
+        function confirmSave(subject) {
+            selectedSubject = subject;
+            closeModal('subjectModal');
+            document.getElementById('confirmText').innerText = subject + "に きろくする？";
+            openModal('confirmModal');
+        }
+
         function viewHistoryBySubject(subject) {
             document.getElementById('historyTitle').innerText = "🎁 " + subject + "の きろく";
-            var history = JSON.parse(localStorage.getItem('furi_v52_history') || '[]');
+            var history = JSON.parse(localStorage.getItem('furi_v53_history') || '[]');
             var filtered = history.filter(h => h.subject === subject);
             var list = document.getElementById('historyList');
             list.innerHTML = `<button onclick="renderHistorySubjects()" class="mb-4 text-orange-400 font-bold">← もどる</button>` + 
@@ -163,18 +151,46 @@
                         <div>③ ${h.fullData.t3.map(w=>w.surface).join('')}</div>
                         <div>④ ${h.fullData.t4.map(w=>w.surface).join('')}</div>
                     </div>
-                    <div class="flex gap-2 mt-3">${h.fullData.photos.map(p => `<img src="${p}" class="w-16 h-16 object-cover rounded-lg border border-orange-50" onclick="viewPhoto('${p}')">`).join('')}</div>
+                    <div class="flex gap-2 mt-3 overflow-x-auto">${h.fullData.photos.map(p => `<img src="${p}" class="w-20 h-20 object-cover rounded-lg border border-orange-50" onclick="viewPhoto('${p}')">`).join('')}</div>
                 </div>
             `).join('');
         }
 
-        // --- 音声・エディタ (省略なし) ---
+        function loadHistoryToApp(historyId) {
+            if(!confirm("この きろくを なおしますか？")) return;
+            var history = JSON.parse(localStorage.getItem('furi_v53_history') || '[]');
+            var target = history.find(h => h.id === historyId);
+            if(target) {
+                appState.tiles = JSON.parse(JSON.stringify(target.fullData));
+                appState.editingId = target.id;
+                appState.originalDate = target.date;
+                refreshTiles();
+                closeModal('historyModal');
+                document.getElementById('saveBtnLabel').innerText = "なおして ほぞんする 💰";
+            }
+        }
+
+        // --- 描画・音声（基本機能） ---
+        function refreshTiles() {
+            ['t1','t2','t3','t4'].forEach(id => {
+                var txt = appState.tiles[id].map(w => w.surface).join('');
+                document.getElementById('p-' + id).innerText = txt || "";
+            });
+            var photoGrid = document.getElementById('photoGrid');
+            photoGrid.innerHTML = appState.tiles.photos.map(src => `
+                <div class="bg-white rounded-xl overflow-hidden flex items-center justify-center p-1 border-2 border-orange-100 h-full w-full">
+                    <img src="${src}" class="w-full h-full object-cover rounded-lg" onclick="event.stopPropagation(); viewPhoto('${src}')">
+                </div>
+            `).join('');
+            document.getElementById('photoLabel').innerText = appState.tiles.photos.length + " / 2枚";
+        }
+
         var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         var rec = SpeechRecognition ? new SpeechRecognition() : null;
         if(rec) {
             rec.lang = 'ja-JP'; rec.interimResults = true;
-            rec.onstart = function() { isRec = true; document.getElementById('micBtn').style.background = "#ef4444"; };
-            rec.onend = function() { isRec = false; document.getElementById('micBtn').style.background = "#38bdf8"; };
+            rec.onstart = function() { isRec = true; document.getElementById('micBtn').style.background = "#ef4444"; document.getElementById('micLabel').innerText="きいてるよ"; };
+            rec.onend = function() { isRec = false; document.getElementById('micBtn').style.background = "#38bdf8"; document.getElementById('micLabel').innerText="おしてね"; };
             rec.onresult = function(e) { if(e.results[e.resultIndex].isFinal) sendToGas(e.results[e.resultIndex][0].transcript); };
         }
         function toggleMic() { if(!rec) return; isRec ? rec.stop() : rec.start(); }
@@ -191,18 +207,14 @@
             document.getElementById('richDisplay').innerHTML = html;
             document.getElementById('kanjiDisplay').innerText = kanji;
         }
-        function renderSubjectGrid(mode) {
-            var grid = document.getElementById('subjectGrid');
-            grid.innerHTML = ALL_SUBJECTS.map(s => `<button onclick="${mode === 'save' ? `confirmSave('${s}')` : `viewHistoryBySubject('${s}')`}" class="bg-orange-400 text-white p-5 rounded-2xl font-black text-2xl shadow-md">${s}</button>`).join('');
-        }
         function renderHistorySubjects() {
-            var history = JSON.parse(localStorage.getItem('furi_v52_history') || '[]');
+            var history = JSON.parse(localStorage.getItem('furi_v53_history') || '[]');
             var used = [...new Set(history.map(h => h.subject))];
             var list = document.getElementById('historyList');
             if(!used.length) { list.innerHTML = "<p class='text-center py-20 text-gray-400 font-bold'>きろくなし</p>"; return; }
             list.innerHTML = `<div class="grid grid-cols-2 gap-4">` + used.map(s => `<button onclick="viewHistoryBySubject('${s}')" class="bg-orange-100 text-orange-600 p-8 rounded-3xl font-black text-3xl shadow-sm">${s}</button>`).join('') + `</div>`;
         }
-        var ALL_SUBJECTS = ["国語", "算数", "生活", "理科", "社会", "音楽", "図工", "体育", "道徳", "外国語"];
+
         window.onload = function() { refreshTiles(); };
     </script>
 
@@ -214,14 +226,16 @@
         .tile-label { color: #fb923c; font-weight: 900; font-size: 0.9rem; margin-bottom: 0.4rem; flex-shrink: 0; }
         .tile-preview { flex: 1; color: #4b5563; font-weight: 900; overflow: hidden; font-size: 1.4rem; line-height: 1.3; word-break: break-all; }
         
-        /* 拡大画面を閉じやすくするための設定 */
-        #photoViewer { background-color: rgba(0,0,0,0.9); z-index: 20000; justify-content: center; align-items: center; cursor: pointer; }
-        
-        #editorOverlay, .modal-bg { position: fixed; inset: 0; z-index: 9999; display: none; flex-direction: column; padding: 1.2rem; pointer-events: none; }
+        #editorOverlay, .modal-bg { position: fixed; inset: 0; z-index: 1000; display: none; flex-direction: column; padding: 1.2rem; pointer-events: none; }
         #editorOverlay { background: #fffbeb; }
         .modal-bg { background-color: rgba(0,0,0,0.8); backdrop-filter: blur(10px); justify-content: center; }
         #richDisplay { flex: 1; background: white; border: 4px solid #ffedd5; border-radius: 2.5rem; padding: 2rem; font-size: 2.8rem; font-weight: 900; outline: none; overflow-y: auto; }
-        .photo-grid-mini { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; height: 100%; padding: 2px; }
+        
+        /* 写真タイル */
+        .photo-grid-mini { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; height: 100%; padding: 4px; }
+        
+        /* 拡大画面 */
+        #photoViewer { background-color: rgba(0,0,0,0.95); z-index: 99999; justify-content: center; align-items: center; cursor: pointer; }
     </style>
 </head>
 <body class="select-none">
@@ -254,11 +268,11 @@
         <p class="text-white font-bold mt-6 text-xl animate-bounce">タップして とじる</p>
     </div>
 
-    <div id="historyModal" class="modal-bg"><div class="bg-amber-50 rounded-[3rem] p-8 w-full max-w-2xl h-[85vh] flex flex-col pointer-events-auto border-8 border-white"><h2 id="historyTitle" class="text-3xl font-black text-orange-400 mb-6 text-center italic">🎁 きろく</h2><div id="historyList" class="flex-1 overflow-y-auto"></div><button onclick="closeModal('historyModal')" class="w-full mt-6 bg-orange-400 text-white py-5 rounded-[2rem] font-black text-2xl">とじる</button></div></div>
+    <div id="historyModal" class="modal-bg"><div class="bg-amber-50 rounded-[3rem] p-8 w-full max-w-2xl h-[85vh] flex flex-col pointer-events-auto border-8 border-white"><h2 id="historyTitle" class="text-3xl font-black text-orange-400 mb-6 text-center">🎁 きろく</h2><div id="historyList" class="flex-1 overflow-y-auto"></div><button onclick="closeModal('historyModal')" class="w-full mt-6 bg-orange-400 text-white py-5 rounded-[2rem] font-black text-2xl">とじる</button></div></div>
     <div id="subjectModal" class="modal-bg"><div class="bg-white rounded-[3rem] p-8 w-full max-w-lg pointer-events-auto border-8 border-orange-100"><h2 class="text-3xl font-black text-orange-400 mb-8 text-center">どの きょうか？</h2><div id="subjectGrid" class="grid grid-cols-2 gap-4 mb-6"></div><button onclick="closeModal('subjectModal')" class="w-full text-gray-400 font-bold text-xl">やめる</button></div></div>
-    <div id="confirmModal" class="modal-bg"><div class="bg-white rounded-[3rem] p-12 w-full max-w-sm text-center pointer-events-auto border-8 border-orange-400"><p id="confirmText" class="text-3xl font-black text-gray-700 mb-10"></p><div class="flex gap-4"><button onclick="closeModal('confirmModal')" class="flex-1 bg-gray-100 py-5 rounded-2xl font-black text-gray-400">いいえ</button><button onclick="executeSave()" class="flex-1 bg-orange-500 py-5 rounded-2xl font-black text-white">はい！</button></div></div></div>
+    <div id="confirmModal" class="modal-bg"><div class="bg-white rounded-[3rem] p-12 w-full max-w-sm text-center pointer-events-auto border-8 border-orange-400"><p id="confirmText" class="text-3xl font-black text-gray-700 mb-10"></p><div class="flex gap-4"><button onclick="closeModal('confirmModal')" class="flex-1 bg-gray-100 py-5 rounded-2xl font-black text-gray-400 text-xl">いいえ</button><button onclick="executeSave()" class="flex-1 bg-orange-500 py-5 rounded-2xl font-black text-white text-xl">はい！</button></div></div></div>
 
-    <div id="editorOverlay"><div class="flex justify-between items-center mb-4 pointer-events-auto px-2"><button onclick="closeEditor(false)" class="text-gray-400 font-black text-2xl p-2">✖ やめる</button><div id="editorTitle" class="text-orange-400 font-black text-3xl">編集</div><button onclick="closeEditor(true)" class="bg-orange-400 text-white px-12 py-4 rounded-full font-black text-2xl">決定</button></div><div id="richDisplay" contenteditable="true" class="pointer-events-auto"></div><div id="kanjiDisplay" class="text-lg text-gray-300 italic font-bold mt-2 px-4 opacity-50"></div><div class="grid grid-cols-2 gap-6 mt-6 pointer-events-auto"><button id="micBtn" onclick="toggleMic()" class="bg-sky-400 rounded-[2rem] py-8 text-white font-black text-4xl"><span id="micLabel">おしてね</span></button><button onclick="appState.tiles[appState.activeId].pop(); renderEditor();" class="bg-white border-4 border-orange-100 rounded-[2rem] py-8 text-orange-400 font-black text-4xl">1字けす</button></div></div>
+    <div id="editorOverlay"><div class="flex justify-between items-center mb-4 pointer-events-auto px-2"><button onclick="closeEditor(false)" class="text-gray-400 font-black text-2xl p-2">✖ やめる</button><div id="editorTitle" class="text-orange-400 font-black text-3xl">編集</div><button onclick="closeEditor(true)" class="bg-orange-400 text-white px-12 py-4 rounded-full font-black text-2xl">決定</button></div><div id="richDisplay" contenteditable="true" class="pointer-events-auto shadow-inner"></div><div id="kanjiDisplay" class="text-lg text-gray-300 italic font-bold mt-2 px-4 opacity-50"></div><div class="grid grid-cols-2 gap-6 mt-6 pointer-events-auto"><button id="micBtn" onclick="toggleMic()" class="bg-sky-400 rounded-[2rem] py-8 text-white font-black text-4xl"><span id="micLabel">おしてね</span></button><button onclick="appData.tiles[appState.activeId].pop(); renderEditor();" class="bg-white border-4 border-orange-100 rounded-[2rem] py-8 text-orange-400 font-black text-4xl">1字けす</button></div></div>
 
 </body>
 </html>
