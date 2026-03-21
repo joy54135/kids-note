@@ -1,103 +1,107 @@
 <!DOCTYPE html>
-<html>
+<html lang="ja">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>せんせいと ふりかえり</title>
-  <link href="https://fonts.googleapis.com/css2?family=Kosugi+Maru&display=swap" rel="stylesheet">
-  <style>
-    body { font-family: 'Kosugi Maru', sans-serif; background: #FFF9E6; text-align: center; padding: 10px; }
-    .card { background: white; border-radius: 20px; padding: 15px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); max-width: 600px; margin: 0 auto; }
-    #voice-btn { background: #FF6347; color: white; border: none; padding: 15px; border-radius: 50%; font-size: 2rem; width: 80px; height: 80px; margin-bottom: 10px; cursor: pointer; box-shadow: 0 4px 0 #CD5C5C; }
-    #voice-btn:active { transform: translateY(2px); box-shadow: none; }
-    #voice-btn.recording { background: #666; animation: blink 1s infinite; }
-    @keyframes blink { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
-    textarea { width: 90%; height: 80px; font-size: 1.2rem; border: 3px solid #FFD700; border-radius: 15px; padding: 10px; outline: none; }
-    .mode-container { display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; margin: 15px 0; }
-    .mode-btn { padding: 10px 2px; font-size: 0.8rem; border-radius: 10px; border: 1px solid #ccc; background: white; }
-    .mode-btn.active { background: #FFD700; border-color: #FF8C00; font-weight: bold; }
-    #result-box { background: white; border: 6px solid #FF8C00; border-radius: 20px; min-height: 80px; padding: 15px; font-size: 1.8rem; margin-top: 15px; text-align: left; line-height: 1.4; }
-    #submit-btn { background: #32CD32; color: white; border: none; padding: 15px; border-radius: 40px; font-size: 1.2rem; font-weight: bold; width: 100%; margin-top: 10px; box-shadow: 0 4px 0 #228B22; cursor: pointer; }
-    #submit-btn:disabled { background: #ccc; box-shadow: none; }
-    input[type="file"] { margin: 10px 0; font-size: 0.8rem; }
-    #preview { max-width: 100%; border-radius: 10px; display: none; margin-top: 10px; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ひらがな めがね</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @keyframes pop {
+            0% { transform: scale(0.5) rotate(-5deg); opacity: 0; }
+            70% { transform: scale(1.1) rotate(2deg); }
+            100% { transform: scale(1) rotate(0); opacity: 1; }
+        }
+        .word-card { animation: pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        .pulse-red { animation: pulse 1s infinite; }
+        @keyframes pulse {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { box-shadow: 0 0 0 20px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+    </style>
 </head>
-<body>
+<body class="bg-amber-50 h-screen flex flex-col items-center justify-between p-6 overflow-hidden select-none">
 
-  <div class="card">
-    <button id="voice-btn" onclick="toggleVoice()">🎤</button>
-    <div id="status" style="font-size: 0.8rem; color: #666; margin-bottom: 5px;">マイクをおして おはなししてね</div>
-    
-    <textarea id="input-text" placeholder="ここに おはなしが 出るよ"></textarea>
-    
-    <div class="mode-container">
-      <button class="mode-btn active" onclick="setMode(1, this)">①かな</button>
-      <button class="mode-btn" onclick="setMode(2, this)">②カナ</button>
-      <button class="mode-btn" onclick="setMode(3, this)">③1年</button>
-      <button class="mode-btn" onclick="setMode(4, this)">④2年</button>
+    <h1 class="text-3xl font-black text-orange-400 mt-4">ひらがな めがね</h1>
+
+    <div id="display" class="flex flex-wrap justify-center gap-4 w-full h-2/3 content-center">
+        <p id="msg" class="text-xl text-orange-200 font-bold">ボタンを おして はなしてね</p>
     </div>
 
-    <input type="file" id="photo-input" accept="image/*" onchange="previewImage()">
-    <img id="preview">
-    
-    <button id="submit-btn" onclick="sendData()">せんせいに おくる！</button>
-  </div>
+    <div class="mb-12 relative">
+        <button id="micBtn" class="w-44 h-44 bg-sky-400 border-[12px] border-sky-100 rounded-full shadow-2xl flex items-center justify-center active:scale-95 transition-all outline-none">
+            <span id="btnLabel" class="text-white text-2xl font-black">おしてね</span>
+        </button>
+    </div>
 
-  <div id="result-box">ここに へんかんした もじが 出るよ</div>
+    <script>
+        // --- 設定 ---
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbw3A5ymNSeTEIw5s-H8yLqwi-WMHV6H9WZVyimOFXGvWIm8MqBIY57piOn_wFY8PuI/exec';
+        const sounds = {
+            start: new Audio('https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3'),
+            success: new Audio('https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3')
+        };
 
-  <script>
-    // --- ここを自分のGAS URLに書き換える ---
-    const GAS_URL = "https://script.google.com/macros/s/AKfycbykQlJkKByIrDJc0A0CjXIgo2jA9j5cytG2y4Tec7pT09BMDXEIenGBZmso1h_zWldCkA/exec"; 
-    // ------------------------------------
+        const micBtn = document.getElementById('micBtn');
+        const btnLabel = document.getElementById('btnLabel');
+        const display = document.getElementById('display');
+        const msg = document.getElementById('msg');
 
-    let mode = 1;
-    let base64 = null;
-    let recognition = ('webkitSpeechRecognition' in window) ? new webkitSpeechRecognition() : null;
+        // 音声認識のセットアップ
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        if (!SpeechRecognition) {
+            alert("このiPadは対応していません。Safariでひらいてね。");
+        } else {
+            const recognition = new SpeechRecognition();
+            recognition.lang = 'ja-JP';
 
-    if (recognition) {
-      recognition.lang = 'ja-JP';
-      recognition.onstart = () => { document.getElementById('voice-btn').classList.add('recording'); document.getElementById('status').innerText = "きいています..."; };
-      recognition.onend = () => { document.getElementById('voice-btn').classList.remove('recording'); document.getElementById('status').innerText = "マイクをおして おはなししてね"; };
-      recognition.onresult = (e) => { document.getElementById('input-text').value = e.results[0][0].transcript; };
-    }
+            micBtn.onclick = () => {
+                if (GAS_URL.includes('ここに')) return alert('GASのURLをセットしてね！');
+                try { recognition.start(); } catch(e) {}
+            };
 
-    function toggleVoice() { if (recognition) recognition.start(); else alert("マイクが使えません"); }
-    function setMode(m, btn) { mode = m; document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active')); btn.classList.add('active'); }
+            recognition.onstart = () => {
+                sounds.start.play();
+                micBtn.classList.add('bg-red-500', 'border-red-200', 'pulse-red');
+                micBtn.classList.remove('bg-sky-400', 'border-sky-100');
+                btnLabel.innerText = "きいてるよ";
+            };
 
-    function previewImage() {
-      const file = document.getElementById('photo-input').files[0];
-      const reader = new FileReader();
-      reader.onloadend = () => { base64 = reader.result; const img = document.getElementById('preview'); img.src = base64; img.style.display = 'block'; };
-      reader.readAsDataURL(file);
-    }
+            recognition.onend = () => {
+                micBtn.classList.remove('bg-red-500', 'border-red-200', 'pulse-red');
+                micBtn.classList.add('bg-sky-400', 'border-sky-100');
+                btnLabel.innerText = "おしてね";
+            };
 
-    async function sendData() {
-      const text = document.getElementById('input-text').value;
-      if(!text) return alert("なにか おはなししてね！");
-      const btn = document.getElementById('submit-btn');
-      btn.disabled = true;
-      btn.innerText = "おくり中...";
-      
-      try {
-        const response = await fetch(GAS_URL, {
-          method: "POST",
-          mode: "no-cors", // これを入れるとエラーが出にくくなります
-          body: JSON.stringify({ text, mode, imageBase64: base64, fileName: "image.jpg" })
-        });
-        
-        // 保存はGAS側で完了するので、少し待ってから成功表示にします
-        setTimeout(() => {
-          document.getElementById('result-box').innerText = "せんせいに とどいたよ！スプレッドシートを みてね。";
-          btn.innerText = "おわったよ！";
-        }, 1500);
+            recognition.onresult = async (event) => {
+                const transcript = event.results[0][0].transcript;
+                msg.innerText = "かんがえちゅう...";
+                
+                try {
+                    const res = await fetch(GAS_URL, {
+                        method: 'POST',
+                        body: JSON.stringify({ text: transcript })
+                    });
+                    const data = await res.json();
+                    
+                    renderWords(data.words);
+                    sounds.success.play();
+                } catch (e) {
+                    msg.innerText = "エラーになっちゃった";
+                }
+            };
+        }
 
-      } catch (err) {
-        alert("エラー: " + err);
-        btn.disabled = false;
-        btn.innerText = "もういちど おくる";
-      }
-    }
-  </script>
+        function renderWords(words) {
+            display.innerHTML = '';
+            words.forEach((word, i) => {
+                const card = document.createElement('div');
+                card.className = 'word-card bg-white border-b-8 border-orange-100 rounded-3xl p-6 shadow-xl';
+                card.innerHTML = `<span class="text-6xl font-black text-gray-700">${word}</span>`;
+                card.style.animationDelay = `${i * 0.1}s`;
+                display.appendChild(card);
+            });
+        }
+    </script>
 </body>
 </html>
