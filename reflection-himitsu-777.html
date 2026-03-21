@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ひらがな めがね Ver.13.0</title>
+    <title>ひらがな めがね Ver.14.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @keyframes pop { 0% { transform: scale(0.5) opacity: 0; } 100% { transform: scale(1) opacity: 1; } }
@@ -29,12 +29,13 @@
 
     <div class="mb-12 relative flex flex-col items-center">
         <button id="micBtn" class="w-44 h-44 bg-sky-400 border-[12px] border-sky-100 rounded-full shadow-2xl flex items-center justify-center active:scale-90 transition-all outline-none">
-            <span id="btnLabel" class="text-white text-3xl font-black italic">おしてね</span>
+            <span id="btnLabel" class="text-white text-3xl font-black italic tracking-tighter">おしてね</span>
         </button>
     </div>
 
     <script>
-        const GAS_URL = 'https://script.google.com/macros/s/AKfycbx84e1eMv__5e0AwcNroIf9mQVgKcWXK7xUXhT76rRcw4yOdAd4ugXz2EYLPVQjps7y/exec'; 
+        // ★ここにGASの最新URLを貼り付けてください
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbzfFhQEVv5dMzy_cgQ3oLWp_wi_kkb11XhZlte5zad2Gl4Nsj1Vi13A2W6rR0SjCSpA/exec'; 
         
         const sounds = {
             start: new Audio('https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3'),
@@ -56,7 +57,7 @@
         } else {
             const recognition = new SpeechRecognition();
             recognition.lang = 'ja-JP';
-            recognition.interimResults = true;
+            recognition.interimResults = true; // リアルタイムで文字を出す
 
             micBtn.onclick = () => {
                 if (!isRunning) {
@@ -65,7 +66,8 @@
                     try { recognition.start(); } catch(e) {}
                 } else {
                     sounds.stop.play().catch(() => {});
-                    recognition.stop();
+                    recognition.stop(); // 停止すると onresult が確定して送信されます
+                    btnLabel.innerText = "WAIT...";
                 }
             };
 
@@ -104,7 +106,7 @@
                     showError(data.error, data.debug);
                 }
             } catch (e) {
-                showError("つうしんエラー", "ネットがつながっていないかも？");
+                showError("つうしんエラー", "ネットが つながっていないかも？");
             }
         }
 
