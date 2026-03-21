@@ -3,11 +3,46 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>学びの足跡 v6.5</title>
+    <title>学びの足跡 v6.6</title>
     <script src="https://cdn.tailwindcss.com"></script>
     
+    <style>
+        body { height: 100dvh; background-color: #fffbeb; margin: 0; display: flex; flex-direction: column; overflow: hidden; font-family: sans-serif; }
+        .main-container { flex: 1; display: flex; flex-direction: column; padding: 1rem; gap: 0.8rem; min-height: 0; }
+        .tiles-grid { flex: 1; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1.2fr 1.2fr 0.8fr; gap: 0.8rem; min-height: 0; }
+        
+        /* タイルボタン：常に一番下のレイヤー */
+        .tile-btn { background: white; border: 4px solid #ffedd5; border-radius: 2rem; padding: 1.2rem; display: flex; flex-direction: column; text-align: left; min-height: 0; position: relative; z-index: 10; }
+        .tile-btn:active { background: #fff7ed; transform: scale(0.98); }
+        .tile-preview { flex: 1; color: #4b5563; font-weight: 900; overflow: hidden; font-size: 1.4rem; line-height: 1.3; word-break: break-all; }
+        
+        /* 透明な壁対策：初期状態は完全に消し去る */
+        #editorOverlay, .modal-bg { 
+            position: fixed; inset: 0; display: none; flex-direction: column; padding: 1.2rem; 
+            z-index: -1; pointer-events: none; visibility: hidden;
+        }
+
+        /* 開いた時だけ表に出す */
+        #editorOverlay.active, .modal-bg.active { 
+            display: flex; z-index: 9999; pointer-events: auto; visibility: visible;
+        }
+
+        .modal-bg { background-color: rgba(0,0,0,0.8); backdrop-filter: blur(10px); justify-content: center; align-items: center; }
+        .modal-content { background: white; border-radius: 3rem; padding: 2rem; width: 100%; max-width: 32rem; pointer-events: auto; border: 8px border-orange-100; position: relative; z-index: 10000; }
+
+        /* 教科ボタン：絶対に一番上に来るように */
+        .subject-btn { background-color: #fb923c; color: white; padding: 1.25rem; border-radius: 1.5rem; font-weight: 900; font-size: 1.5rem; box-shadow: 0 4px 6px rgba(0,0,0,0.1); position: relative; z-index: 11000; }
+        .subject-btn:active { transform: scale(0.95); background-color: #f97316; }
+
+        #richDisplay { flex: 1; background: white; border: 4px solid #ffedd5; border-radius: 2.5rem; padding: 2rem; font-size: 2.8rem; font-weight: 900; outline: none; overflow-y: auto; }
+        .photo-container { position: relative; background: white; border: 2px solid #ffedd5; border-radius: 1rem; overflow: hidden; height: 100%; }
+        .photo-img-main { width: 100%; height: 100%; object-fit: cover; }
+        .delete-btn { position: absolute; top: 4px; right: 4px; background: #ef4444; color: white; width: 24px; height: 24px; border-radius: 50%; font-weight: bold; border: 2px solid white; z-index: 50; }
+        .badge { position: absolute; bottom: 0.5rem; right: 0.5rem; font-size: 2.8rem; pointer-events: none; animation: pop-bounce 0.6s forwards; }
+        @keyframes pop-bounce { 0% { transform: scale(0); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+    </style>
+
     <script>
-        // --- 1. データ管理 ---
         var GAS_URL = 'https://script.google.com/macros/s/AKfycbxxE14tNshFIqZHwzhyGQtRDeSazD9aPex9Tm0gIGJjmUvd8jAiFN-bkQyNIt_D9cV_/exec';
         var STORAGE_KEY = 'manabi_takara_history_v2';
         
@@ -19,137 +54,180 @@
         };
         var isRec = false;
         var lastInterim = "";
-        var selectedSubject = "未設定";
-
-        var EMOJI_LIST = ["🌸", "⭐", "🦖", "🚀", "🦄", "👑", "💎", "🎈", "🦁", "🐬", "🍭", "🎨", "⚽", "🌈", "✨", "🐳", "🐱", "🐶", "🐰", "🐼", "🐯", "🥇", "🏆", "🎁", "🍦", "🍓", "🍎", "🦊", "🐨", "🐧", "🐝", "🍀", "🌻", "☀️", "🌙", "❄️", "🔥", "🛸", "🎮", "🛹", "🎸", "🏀", "🪄", "🐉", "🧸", "🎀", "🍬", "⚡", "🏎️", "🦅"];
         var ALL_SUBJECTS = ["国語", "算数", "生活", "理科", "社会", "音楽", "図工", "体育", "道徳", "外国語"];
+        var EMOJI_LIST = ["🌸", "⭐", "🦖", "🚀", "🦄", "👑", "💎", "🎈", "🦁", "🐬", "🍭", "🎨", "⚽", "🌈", "✨", "🐳", "🐱", "🐶", "🐰", "🐼", "🐯", "🥇", "🏆", "🎁", "🍦", "🍓", "🍎", "🐨", "🐧", "🐝", "🍀", "🌻", "☀️", "🌙", "❄️", "🔥", "🛸", "🎮", "🎸", "🏀", "🪄", "🐉", "🧸", "🎀", "🍬", "⚡", "🏎️", "🦅"];
 
-        // --- 2. 保存ロジック ---
-        function getHistory() { try { var data = localStorage.getItem(STORAGE_KEY); return data ? JSON.parse(data) : []; } catch (e) { return []; } }
-
-        function startSaveProcess() {
+        // --- 保存・なおすボタンの完全修正 ---
+        function startSave() {
             if (appState.editingId) {
-                executeSaveAction();
+                executeFinalSave(null); // 再修正時は教科選択を飛ばして即保存
             } else {
                 openModal('subjectModal');
             }
         }
 
-        function executeSaveAction(subjectName) {
-            var history = getHistory();
-            var tilesCopy = JSON.parse(JSON.stringify(appState.tiles));
-            var badgesCopy = JSON.parse(JSON.stringify(appState.badges));
+        function executeFinalSave(subjectName) {
+            try {
+                var history = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+                var tilesCopy = JSON.parse(JSON.stringify(appState.tiles));
+                var badgesCopy = JSON.parse(JSON.stringify(appState.badges));
 
-            if (appState.editingId) {
-                var index = history.findIndex(function(h) { return h.id === appState.editingId; });
-                if (index !== -1) {
-                    history[index].fullData = tilesCopy;
-                    history[index].badges = badgesCopy;
+                if (appState.editingId) {
+                    var idx = history.findIndex(h => h.id === appState.editingId);
+                    if (idx !== -1) {
+                        history[idx].fullData = tilesCopy;
+                        history[idx].badges = badgesCopy;
+                    }
+                } else {
+                    history.unshift({ 
+                        id: Date.now(), date: new Date().toLocaleString('ja-JP'), 
+                        subject: subjectName, fullData: tilesCopy, badges: badgesCopy 
+                    });
                 }
-            } else {
-                history.unshift({ 
-                    id: Date.now(), 
-                    date: new Date().toLocaleString('ja-JP'), 
-                    subject: subjectName || selectedSubject, 
-                    fullData: tilesCopy,
-                    badges: badgesCopy
-                });
-            }
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(history.slice(0, 30)));
-            
-            // ★保存完了メッセージを復活
-            alert("保存しました！");
-            location.reload();
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(history.slice(0, 30)));
+                alert("保存しました！");
+                location.reload();
+            } catch (e) { alert("エラーが起きました。もういちど試してね。"); }
         }
 
-        // --- 3. 画面・描画操作 ---
+        // --- 画面操作 ---
         function openModal(id) {
-            if (id === 'subjectModal') renderSubjectGrid();
-            if (id === 'historyModal') renderHistorySubjects();
-            var m = document.getElementById(id);
-            m.style.display = 'flex';
+            if (id === 'subjectModal') renderSubjects();
+            if (id === 'historyModal') renderHistory();
+            document.getElementById(id).classList.add('active');
         }
 
-        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+        }
 
-        function refreshTiles() {
-            ['t1','t2','t3','t4'].forEach(function(id) {
-                var txt = appState.tiles[id].map(function(w){return w.surface;}).join('');
-                document.getElementById('p-' + id).innerText = txt || "";
-                var badgeEl = document.getElementById('badge-' + id);
-                if (appState.badges[id] && txt.length > 0) { badgeEl.innerText = appState.badges[id]; badgeEl.style.display = "block"; } else { badgeEl.style.display = "none"; }
+        function renderSubjects() {
+            var grid = document.getElementById('subjectGrid');
+            grid.innerHTML = ALL_SUBJECTS.map(s => 
+                `<button onclick="executeFinalSave('${s}')" class="subject-btn">${s}</button>`
+            ).join('');
+        }
+
+        // --- 編集画面 ---
+        function openEditor(id) {
+            appState.activeId = id;
+            document.getElementById('editorOverlay').classList.add('active');
+            document.getElementById('editorTitle').innerText = {t1:'①めあて', t2:'②できたこと', t3:'③むずかしかった', t4:'④つぎのこと'}[id];
+            renderEditorDisplay();
+        }
+
+        function closeEditor(save) {
+            if(save) {
+                var txt = appState.tiles[appState.activeId].map(w => w.surface).join('');
+                if(txt.length > 0 && !appState.badges[appState.activeId]) {
+                    appState.badges[appState.activeId] = EMOJI_LIST[Math.floor(Math.random() * EMOJI_LIST.length)];
+                } else if(!txt.length) appState.badges[appState.activeId] = "";
+                refreshMainView();
+            }
+            document.getElementById('editorOverlay').classList.remove('active');
+        }
+
+        // --- 履歴表示 ---
+        function renderHistory() {
+            var history = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+            var list = document.getElementById('historyList');
+            document.getElementById('historyTitle').innerText = "🎁 どの きょうかを みる？";
+            list.innerHTML = '<div class="grid grid-cols-2 gap-4">' + ALL_SUBJECTS.map(s => {
+                var hasData = history.some(h => h.subject === s);
+                return hasData ? `<button onclick="viewHistorySubject('${s}')" class="bg-orange-400 text-white p-6 rounded-2xl font-black text-2xl border-4 border-white shadow-md">${s}</button>`
+                               : `<button class="bg-gray-100 text-gray-300 p-6 rounded-2xl font-black text-2xl border-4 border-dashed border-gray-200 opacity-60">${s}</button>`;
+            }).join('') + '</div>';
+        }
+
+        function viewHistorySubject(s) {
+            var history = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+            var filtered = history.filter(h => h.subject === s);
+            var list = document.getElementById('historyList');
+            document.getElementById('historyTitle').innerText = "🎁 " + s + "の きろく";
+            var html = '<button onclick="renderHistory()" class="mb-6 text-orange-400 font-black text-xl">⬅️ もどる</button>';
+            filtered.forEach(h => {
+                var b = h.badges || {};
+                html += `<div class="bg-white border-4 border-orange-100 p-6 rounded-[2.5rem] mb-6 shadow-sm">
+                    <div class="flex justify-between items-center mb-3">
+                        <span class="text-xs text-orange-300 font-black">${h.date}</span>
+                        <button onclick="loadToApp(${h.id})" class="bg-sky-400 text-white px-6 py-2 rounded-full text-sm font-black shadow-md">✎なおす</button>
+                    </div>
+                    <div class="space-y-1 text-sm font-black text-gray-700">
+                        ${['t1','t2','t3','t4'].map((k,i)=>`<div class="flex justify-between border-b border-orange-50"><span>${i+1} ${(h.fullData[k]||[]).map(w=>w.surface).join('')}</span><span class="text-xl">${b[k]||""}</span></div>`).join('')}
+                    </div>
+                    <div class="flex gap-2 mt-4">${(h.fullData.photos||[]).map(p=>`<img src="${p}" class="w-16 h-16 object-cover rounded-xl" onclick="viewPhoto('${p}')">`).join('')}</div>
+                </div>`;
             });
-            // ★写真のはみ出し対策（サイズと余白を固定）
-            document.getElementById('photoGrid').innerHTML = appState.tiles.photos.map(function(src, idx) {
-                return '<div class="photo-container"><img src="' + src + '" class="photo-img-main" onclick="event.stopPropagation(); viewPhoto(\'' + src + '\')"><button class="delete-btn" onclick="event.stopPropagation(); deletePhoto(' + idx + ')">✖</button></div>';
-            }).join('');
-            document.getElementById('photoLabelInner').innerText = appState.tiles.photos.length + " / 2枚";
+            list.innerHTML = html;
         }
 
-        function renderSubjectGrid() {
-            // ★教科ボタンの反応改善：z-indexとpointer-eventsを確実に
-            document.getElementById('subjectGrid').innerHTML = ALL_SUBJECTS.map(function(s){ 
-                return '<button onclick="executeSaveAction(\'' + s + '\')" class="bg-orange-400 text-white p-6 rounded-2xl font-black text-2xl shadow-md active:scale-95 relative z-[11000]">' + s + '</button>'; 
-            }).join(''); 
+        function loadToApp(id) {
+            var history = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+            var target = history.find(h => h.id === id);
+            if(target && confirm("なおしますか？")) {
+                appState.tiles = JSON.parse(JSON.stringify(target.fullData));
+                appState.badges = JSON.parse(JSON.stringify(target.badges || {}));
+                appState.editingId = id;
+                refreshMainView();
+                closeModal('historyModal');
+                document.getElementById('saveBtnLabel').innerText = "なおして ほぞんする 💰";
+                document.getElementById('saveBtnContainer').style.backgroundColor = "#38bdf8";
+            }
         }
 
-        // --- 4. 音声・エディタ ---
+        // --- 音声入力 ---
         var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         var rec = SpeechRecognition ? new SpeechRecognition() : null;
         if(rec) {
             rec.lang = 'ja-JP'; rec.interimResults = true;
-            rec.onstart = function() { isRec = true; lastInterim = ""; document.getElementById('micBtn').style.background = "#ef4444"; document.getElementById('micLabel').innerText = "やめる"; };
-            rec.onend = function() { isRec = false; document.getElementById('micBtn').style.background = "#38bdf8"; document.getElementById('micLabel').innerText = "おしてね"; if (lastInterim) { sendToGas(lastInterim); lastInterim = ""; } };
-            rec.onresult = function(e) { var interim = ""; for (var i = e.resultIndex; i < e.results.length; i++) { if (e.results[i].isFinal) { sendToGas(e.results[i][0].transcript); lastInterim = ""; } else { interim += e.results[i][0].transcript; } } lastInterim = interim; };
+            rec.onstart = () => { isRec = true; lastInterim = ""; document.getElementById('micBtn').style.background = "#ef4444"; document.getElementById('micLabel').innerText = "やめる"; };
+            rec.onend = () => { isRec = false; document.getElementById('micBtn').style.background = "#38bdf8"; document.getElementById('micLabel').innerText = "おしてね"; if(lastInterim) sendToGas(lastInterim); };
+            rec.onresult = (e) => { var interim = ""; for(var i=e.resultIndex; i<e.results.length; i++){ if(e.results[i].isFinal){ sendToGas(e.results[i][0].transcript); lastInterim = ""; } else { interim += e.results[i][0].transcript; } } lastInterim = interim; };
         }
         async function sendToGas(text) {
-            if (!text || text.trim() === "") return;
+            if(!text.trim()) return;
             document.getElementById('loadingStatus').style.display = "flex";
             try {
                 var res = await fetch(GAS_URL + '?text=' + encodeURIComponent(text));
                 var d = await res.json();
-                if(d.words_all) { appState.tiles[appState.activeId] = appState.tiles[appState.activeId].concat(d.words_all); renderEditor(); }
-            } catch(e) {} finally { document.getElementById('loadingStatus').style.display = "none"; }
+                if(d.words_all) { appState.tiles[appState.activeId] = appState.tiles[appState.activeId].concat(d.words_all); renderEditorDisplay(); }
+            } catch(e){} finally { document.getElementById('loadingStatus').style.display = "none"; }
         }
-        function renderEditor() { var html = ""; var kanji = ""; appState.tiles[appState.activeId].forEach(function(w){ html += w.furigana || w.surface; kanji += w.surface; }); document.getElementById('richDisplay').innerHTML = html; document.getElementById('kanjiDisplay').innerText = kanji; }
 
-        // --- 5. 基本機能 ---
-        function openEditor(id) { appState.activeId = id; document.getElementById('editorOverlay').style.display = 'flex'; document.getElementById('editorTitle').innerText = {t1:'①めあて', t2:'②できたこと', t3:'③むずかしかった', t4:'④つぎのこと'}[id]; renderEditor(); }
-        function closeEditor(save) { if(save) { var txt = appState.tiles[appState.activeId].map(w=>w.surface).join(''); if(txt.length > 0 && !appState.badges[appState.activeId]) appState.badges[appState.activeId] = EMOJI_LIST[Math.floor(Math.random() * EMOJI_LIST.length)]; else if(!txt.length) appState.badges[appState.activeId]=""; refreshTiles(); } document.getElementById('editorOverlay').style.display = 'none'; }
-        function handlePhotos(input) { var cur = appState.tiles.photos.length; var files = Array.from(input.files); if (cur >= 2 || (cur + files.length) > 2) { alert("2枚までです"); input.value = ""; return; } files.forEach(file => { var r = new FileReader(); r.onload = e => { var i = new Image(); i.onload = () => { var c = document.createElement('canvas'); var m = 1000; var w = i.width, h = i.height; if(w > h) { if(w > m){ h *= m/w; w = m; } } else { if(h > m){ w *= m/h; h = m; } } c.width = w; c.height = h; c.getContext('2d').drawImage(i, 0, 0, w, h); appState.tiles.photos.push(c.toDataURL('image/jpeg', 0.7)); refreshTiles(); }; i.src = e.target.result; }; r.readAsDataURL(file); }); input.value = ""; }
-        function deletePhoto(index) { if (confirm("けす？")) { appState.tiles.photos.splice(index, 1); refreshTiles(); } }
-        function viewPhoto(src) { document.getElementById('fullPhoto').src = src; document.getElementById('photoViewer').style.display = 'flex'; }
-        function closePhoto() { document.getElementById('photoViewer').style.display = 'none'; }
-        function renderHistorySubjects() { var h = getHistory(); var list = document.getElementById('historyList'); list.innerHTML = '<div class="grid grid-cols-2 gap-4">' + ALL_SUBJECTS.map(s => { var has = h.some(x => x.subject === s); return has ? '<button onclick="viewHistoryBySubject(\'' + s + '\')" class="bg-orange-400 text-white p-6 rounded-2xl font-black text-2xl shadow-md border-4 border-white">' + s + '</button>' : '<button class="bg-gray-100 text-gray-300 p-6 rounded-2xl font-black text-2xl border-4 border-dashed border-gray-200 opacity-60">' + s + '</button>'; }).join('') + '</div>'; }
-        function viewHistoryBySubject(subject) { var h = getHistory().filter(x => x.subject === subject); var list = document.getElementById('historyList'); var html = '<button onclick="renderHistorySubjects()" class="mb-6 text-orange-400 font-black text-xl">⬅️ もどる</button>'; h.forEach(x => { var b = x.badges || {t1:"",t2:"",t3:"",t4:""}; html += '<div class="bg-white border-4 border-orange-100 p-6 rounded-[2.5rem] mb-6 shadow-sm"><div class="flex justify-between items-center mb-3 text-xs text-orange-300 font-black">' + x.date + '<button onclick="loadHistoryToApp(' + x.id + ')" class="bg-sky-400 text-white px-6 py-2 rounded-full text-sm">✎なおす</button></div><div class="space-y-1 text-sm font-black text-gray-700">' + ['t1','t2','t3','t4'].map((k,i)=>'<div class="flex justify-between border-b border-orange-50">' + (i+1) + ' ' + (x.fullData[k]||[]).map(w=>w.surface).join('') + '<span>' + (b[k]||"") + '</span></div>').join('') + '</div><div class="flex gap-2 mt-4">' + (x.fullData.photos||[]).map(p=>'<img src="'+p+'" class="w-16 h-16 object-cover rounded-xl" onclick="viewPhoto(\''+p+'\')">').join('') + '</div></div>'; }); list.innerHTML = html; }
-        function loadHistoryToApp(id) { var h = getHistory().find(x=>x.id===id); if(h && confirm("なおす？")) { appState.tiles = JSON.parse(JSON.stringify(h.fullData)); appState.badges = JSON.parse(JSON.stringify(h.badges || {t1:"",t2:"",t3:"",t4:""})); appState.editingId = id; refreshTiles(); closeModal('historyModal'); document.getElementById('saveBtnLabel').innerText = "なおして ほぞんする 💰"; document.getElementById('saveBtnContainer').style.background = "#38bdf8"; } }
-
-        window.onload = function() { refreshTiles(); };
+        // --- 共通・描画 ---
+        function renderEditorDisplay() { var h = ""; var k = ""; (appState.tiles[appState.activeId]||[]).forEach(w=>{ h+=w.furigana||w.surface; k+=w.surface; }); document.getElementById('richDisplay').innerHTML = h; document.getElementById('kanjiDisplay').innerText = k; }
+        function refreshMainView() {
+            ['t1','t2','t3','t4'].forEach(id => {
+                document.getElementById('p-'+id).innerText = appState.tiles[id].map(w=>w.surface).join('');
+                var b = document.getElementById('badge-'+id);
+                if(appState.badges[id]) { b.innerText = appState.badges[id]; b.style.display = "block"; } else b.style.display = "none";
+            });
+            document.getElementById('photoGrid').innerHTML = appState.tiles.photos.map((src,idx) => `<div class="photo-container"><img src="${src}" class="photo-img-main" onclick="event.stopPropagation(); viewPhoto('${src}')"><button class="delete-btn" onclick="event.stopPropagation(); deletePhoto(${idx})">✖</button></div>`).join('');
+            document.getElementById('photoLabelInner').innerText = appState.tiles.photos.length + " / 2枚";
+        }
+        function handlePhotos(input) {
+            var files = Array.from(input.files);
+            if(appState.tiles.photos.length + files.length > 2) { alert("2枚までです"); input.value = ""; return; }
+            files.forEach(file => {
+                var reader = new FileReader();
+                reader.onload = e => {
+                    var img = new Image();
+                    img.onload = () => {
+                        var canvas = document.createElement('canvas'); var max = 1000; var w = img.width, h = img.height;
+                        if(w > h) { if(w > max){ h *= max/w; w = max; } } else { if(h > max){ w *= max/h; h = max; } }
+                        canvas.width = w; canvas.height = h; canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                        appState.tiles.photos.push(canvas.toDataURL('image/jpeg', 0.7)); refreshMainView();
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+            input.value = "";
+        }
+        function deletePhoto(idx) { if(confirm("けす？")){ appState.tiles.photos.splice(idx, 1); refreshMainView(); } }
+        function viewPhoto(src) { document.getElementById('fullPhoto').src = src; openModal('photoViewer'); }
+        window.onload = refreshMainView;
     </script>
-
-    <style>
-        body { height: 100dvh; background-color: #fffbeb; margin: 0; display: flex; flex-direction: column; overflow: hidden; font-family: sans-serif; }
-        .main-container { flex: 1; display: flex; flex-direction: column; padding: 1rem; gap: 0.8rem; min-height: 0; }
-        .tiles-grid { flex: 1; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1.2fr 1.2fr 0.8fr; gap: 0.8rem; min-height: 0; }
-        .tile-btn { background: white; border: 4px solid #ffedd5; border-radius: 2rem; padding: 1.2rem; display: flex; flex-direction: column; text-align: left; min-height: 0; position: relative; }
-        .tile-btn:active { background: #fff7ed; transform: scale(0.98); }
-        .tile-preview { flex: 1; color: #4b5563; font-weight: 900; overflow: hidden; font-size: 1.4rem; line-height: 1.3; word-break: break-all; }
-        #photoLabelInner { position: absolute; top: 1rem; right: 1.2rem; font-size: 0.7rem; font-weight: 900; color: #fdba74; }
-        .badge { position: absolute; bottom: 0.5rem; right: 0.5rem; font-size: 2.8rem; pointer-events: none; animation: pop-bounce 0.6s forwards; }
-        @keyframes pop-bounce { 0% { transform: scale(0); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
-
-        /* 写真：はみ出し対策 */
-        .photo-grid-mini { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; height: 100%; max-height: 100%; padding: 4px; overflow: hidden; }
-        .photo-container { position: relative; background: white; border: 2px solid #ffedd5; border-radius: 1rem; overflow: hidden; height: 100%; }
-        .photo-img-main { width: 100%; height: 100%; object-fit: cover; }
-        .delete-btn { position: absolute; top: 4px; right: 4px; background: #ef4444; color: white; width: 24px; height: 24px; border-radius: 50%; font-weight: bold; border: 2px solid white; z-index: 50; }
-
-        .modal-bg { position: fixed; inset: 0; z-index: 10000; display: none; flex-direction: column; padding: 1.2rem; background-color: rgba(0,0,0,0.8); backdrop-filter: blur(10px); justify-content: center; align-items: center; }
-        #editorOverlay { position: fixed; inset: 0; z-index: 1000; display: none; flex-direction: column; padding: 1.2rem; background: #fffbeb; }
-        #richDisplay { flex: 1; background: white; border: 4px solid #ffedd5; border-radius: 2.5rem; padding: 2rem; font-size: 2.8rem; font-weight: 900; outline: none; overflow-y: auto; }
-        #loadingStatus { position: absolute; inset: 0; background: rgba(255, 255, 255, 0.8); z-index: 6000; display: none; flex-direction: column; align-items: center; justify-content: center; border-radius: 2.5rem; }
-        #photoViewer { background-color: rgba(0,0,0,0.95); z-index: 99999; justify-content: center; align-items: center; cursor: pointer; pointer-events: auto; }
-    </style>
 </head>
 <body class="select-none">
 
@@ -161,37 +239,32 @@
 
     <div class="main-container">
         <div class="tiles-grid">
-            <button class="tile-btn" onclick="openEditor('t1')"><div class="tile-label">①めあて</div><div id="p-t1" class="tile-preview"></div><div id="badge-t1" class="badge" style="display:none;"></div></button>
-            <button class="tile-btn" onclick="openEditor('t2')"><div class="tile-label">②できたこと</div><div id="p-t2" class="tile-preview"></div><div id="badge-t2" class="badge" style="display:none;"></div></button>
-            <button class="tile-btn" onclick="openEditor('t3')"><div class="tile-label">③むずかしかった</div><div id="p-t3" class="tile-preview"></div><div id="badge-t3" class="badge" style="display:none;"></div></button>
-            <button class="tile-btn" onclick="openEditor('t4')"><div class="tile-label">④つぎのこと</div><div id="p-t4" class="tile-preview"></div><div id="badge-t4" class="badge" style="display:none;"></div></button>
+            <button class="tile-btn" onclick="openEditor('t1')"><div class="text-orange-400 font-black text-sm">①めあて</div><div id="p-t1" class="tile-preview"></div><div id="badge-t1" class="badge" style="display:none;"></div></button>
+            <button class="tile-btn" onclick="openEditor('t2')"><div class="text-orange-400 font-black text-sm">②できたこと</div><div id="p-t2" class="tile-preview"></div><div id="badge-t2" class="badge" style="display:none;"></div></button>
+            <button class="tile-btn" onclick="openEditor('t3')"><div class="text-orange-400 font-black text-sm">③むずかしかった</div><div id="p-t3" class="tile-preview"></div><div id="badge-t3" class="badge" style="display:none;"></div></button>
+            <button class="tile-btn" onclick="openEditor('t4')"><div class="text-orange-400 font-black text-sm">④つぎのこと</div><div id="p-t4" class="tile-preview"></div><div id="badge-t4" class="badge" style="display:none;"></div></button>
             <button class="tile-btn col-span-2" onclick="document.getElementById('fileInput').click()">
-                <div class="tile-label">しゃしん</div><div id="photoLabelInner">0 / 2枚</div><div id="photoGrid" class="photo-grid-mini"></div>
+                <div class="text-orange-400 font-black text-sm">しゃしん</div><div id="photoLabelInner" class="absolute top-4 right-4 text-[10px] text-orange-300">0 / 2枚</div>
+                <div id="photoGrid" class="photo-grid-mini h-full"></div>
                 <input type="file" id="fileInput" accept="image/*" multiple style="display:none;" onchange="handlePhotos(this)">
             </button>
         </div>
-        <button id="saveBtnContainer" onclick="startSaveProcess()" class="w-full bg-orange-400 text-white rounded-[2rem] py-5 font-black text-3xl shadow-xl active:scale-95 shrink-0 border-b-8 border-orange-600 transition-all">
+        <button id="saveBtnContainer" onclick="startSave()" class="w-full bg-orange-400 text-white rounded-[2rem] py-5 font-black text-3xl shadow-xl active:scale-95 border-b-8 border-orange-600 transition-all">
             <span id="saveBtnLabel">ぜんぶ ほぞんする 💰</span>
         </button>
     </div>
 
     <div id="subjectModal" class="modal-bg" onclick="if(event.target===this) closeModal('subjectModal')">
-        <div class="bg-white rounded-[3rem] p-8 w-full max-w-lg border-8 border-orange-100 text-center shadow-2xl relative z-[10500]">
+        <div class="modal-content shadow-2xl text-center">
             <h2 class="text-3xl font-black text-orange-400 mb-8">どの きょうか？</h2>
-            <div id="subjectGrid" class="grid grid-cols-2 gap-4 mb-6 relative z-[10600]"></div>
-            <button onclick="closeModal('subjectModal')" class="text-gray-400 font-bold text-xl text-center">やめる</button>
+            <div id="subjectGrid" class="grid grid-cols-2 gap-4 mb-8"></div>
+            <button onclick="closeModal('subjectModal')" class="text-gray-400 font-bold text-xl">やめる</button>
         </div>
     </div>
 
-    <div id="historyModal" class="modal-bg" onclick="if(event.target===this) closeModal('historyModal')"><div class="bg-amber-50 rounded-[3rem] p-8 w-full max-w-2xl h-[85vh] flex flex-col border-8 border-white shadow-2xl overflow-hidden"><h2 id="historyTitle" class="text-3xl font-black text-orange-400 mb-6 text-center italic">🎁 きろく</h2><div id="historyList" class="flex-1 overflow-y-auto"></div><button onclick="closeModal('historyModal')" class="w-full mt-6 bg-orange-400 text-white py-5 rounded-[2rem] font-black text-2xl">とじる</button></div></div>
-    <div id="photoViewer" class="fixed inset-0" style="display: none;" onclick="closePhoto()"><img id="fullPhoto" class="max-w-[95%] max-h-[85%] object-contain rounded-2xl border-4 border-white shadow-2xl"><p class="text-white font-bold mt-6 text-xl text-center animate-bounce">タップして とじる</p></div>
-
-    <div id="editorOverlay">
-        <div class="flex justify-between items-center mb-4 px-2"><button onclick="closeEditor(false)" class="text-gray-400 font-black text-2xl p-2">✖ やめる</button><div id="editorTitle" class="text-orange-400 font-black text-3xl">編集</div><button onclick="closeEditor(true)" class="bg-orange-400 text-white px-12 py-4 rounded-full font-black text-2xl shadow-lg">決定</button></div>
-        <div class="flex-1 relative flex flex-col min-h-0"><div id="loadingStatus" class="flex flex-col items-center justify-center"><div class="text-3xl font-black text-orange-400 animate-bounce">ちょっとまってね🪄</div></div><div id="richDisplay" contenteditable="true" class="shadow-inner"></div></div>
-        <div id="kanjiDisplay" class="text-lg text-gray-300 italic font-bold mt-2 px-4 opacity-50"></div>
-        <div class="grid grid-cols-2 gap-6 mt-6"><button id="micBtn" onclick="if(rec) isRec ? rec.stop() : rec.start()" class="bg-sky-400 rounded-[2rem] py-8 text-white font-black text-4xl shadow-xl active:scale-95 transition-all"><span id="micLabel">おしてね</span></button><button onclick="appState.tiles[appState.activeId].pop(); renderEditor();" class="bg-white border-4 border-orange-100 rounded-[2rem] py-8 text-orange-400 font-black text-4xl shadow-md">1字けす</button></div>
-    </div>
+    <div id="historyModal" class="modal-bg" onclick="if(event.target===this) closeModal('historyModal')"><div class="modal-content h-[85vh] flex flex-col max-w-2xl"><h2 id="historyTitle" class="text-3xl font-black text-orange-400 mb-6 text-center italic">🎁 きろく</h2><div id="historyList" class="flex-1 overflow-y-auto pr-2"></div><button onclick="closeModal('historyModal')" class="w-full mt-6 bg-orange-400 text-white py-5 rounded-[2rem] font-black text-2xl">とじる</button></div></div>
+    <div id="photoViewer" class="modal-bg" onclick="closePhoto()"><img id="fullPhoto" class="max-w-[95%] max-h-[85%] object-contain rounded-2xl border-4 border-white shadow-2xl"><p class="text-white font-bold mt-6 text-xl text-center animate-bounce">タップして とじる</p></div>
+    <div id="editorOverlay" class="bg-[#fffbeb]"><div class="flex justify-between items-center mb-4 px-2 pointer-events-auto"><button onclick="closeEditor(false)" class="text-gray-400 font-black text-2xl p-2">✖ やめる</button><div id="editorTitle" class="text-orange-400 font-black text-3xl">編集</div><button onclick="closeEditor(true)" class="bg-orange-400 text-white px-12 py-4 rounded-full font-black text-2xl shadow-lg">決定</button></div><div class="flex-1 relative flex flex-col min-h-0"><div id="loadingStatus" style="display:none;" class="absolute inset-0 bg-white/80 z-[6000] flex flex-col items-center justify-center rounded-[2.5rem]"><div class="text-3xl font-black text-orange-400 animate-bounce">ちょっとまってね🪄</div></div><div id="richDisplay" contenteditable="true" class="shadow-inner pointer-events-auto"></div></div><div id="kanjiDisplay" class="text-lg text-gray-300 italic font-bold mt-2 px-4 opacity-50"></div><div class="grid grid-cols-2 gap-6 mt-6 pointer-events-auto"><button id="micBtn" onclick="if(rec) isRec ? rec.stop() : rec.start()" class="bg-sky-400 rounded-[2rem] py-8 text-white font-black text-4xl shadow-xl active:scale-95 transition-all"><span id="micLabel">おしてね</span></button><button onclick="appState.tiles[appState.activeId].pop(); renderEditorDisplay();" class="bg-white border-4 border-orange-100 rounded-[2rem] py-8 text-orange-400 font-black text-4xl shadow-md">1字けす</button></div></div>
 
 </body>
 </html>
