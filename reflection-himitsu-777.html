@@ -2,114 +2,185 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>学びの足跡 v4.6</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>学びの足跡 v4.7</title>
     <script src="https://cdn.tailwindcss.com"></script>
     
     <script>
-        // 【重要】iPad対策：最初に関数をすべて用意しておく
-        var appData = { t1: "", t2: "", t3: "", t4: "" };
-        var activeId = "";
+        // --- 1. 基本設定とデータ保持 ---
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbxxE14tNshFIqZHwzhyGQtRDeSazD9aPex9Tm0gIGJjmUvd8jAiFN-bkQyNIt_D9cV_/exec';
+        const KANJI_LISTS = { 1: "一右雨円王音下火花貝学気九休玉金空月犬見五口校左三山子四糸字耳七車手十出女小上森人水正生青夕石赤千川先早草足村大男竹中虫町天田土二日入年白八百文木本名目立力林六", 2: "引羽雲園遠何科夏家歌画回会海絵外角楽活間丸岩顔汽記帰弓牛魚京強教近兄形計元言原戸古午後語工公広交光考行高黄合谷国黒今才細作算止市矢姉思紙寺自時室社弱首秋週春書少場色食心新親図数西声星晴切雪船線前組走多太体台地池知茶昼長鳥朝直通弟店点電刀冬當東答頭同道読内南肉馬売買麦半番父風分聞米歩母方北毎妹万明鳴毛門夜野友用曜来里理話" };
 
+        let appData = { 
+            t1: { words: [], kanji: "" }, 
+            t2: { words: [], kanji: "" }, 
+            t3: { words: [], kanji: "" }, 
+            t4: { words: [], kanji: "" },
+            photos: [] 
+        };
+        let activeId = "";
+        let isRec = false;
+
+        // --- 2. 画面操作 ---
         function openEditor(id) {
-            // タップが届いているか確認するためのテスト
-            console.log("Tile clicked:", id);
             activeId = id;
-            
-            // 画面の切り替え
             document.getElementById('mainView').style.display = 'none';
             document.getElementById('editorOverlay').style.display = 'flex';
-            
-            // タイトルの書き換え
-            var titleText = {t1:'めあて', t2:'できたこと', t3:'むずかしかったこと', t4:'つぎのこと'}[id];
-            document.getElementById('editorTitle').innerText = titleText;
-            
-            // 入力エリアの中身をセット
-            document.getElementById('richDisplay').innerText = appData[id];
+            document.getElementById('editorTitle').innerText = {t1:'めあて', t2:'できたこと', t3:'むずかしかった', t4:'つぎのこと'}[id];
+            renderEditor();
         }
 
-        function closeEditor(shouldSave) {
-            if (shouldSave) {
-                appData[activeId] = document.getElementById('richDisplay').innerText;
-                document.getElementById('p-' + activeId).innerText = appData[activeId];
-            }
+        function closeEditor(save) {
             document.getElementById('editorOverlay').style.display = 'none';
             document.getElementById('mainView').style.display = 'block';
+            if(save) refreshTiles();
         }
 
-        function triggerPhoto() {
-            document.getElementById('fileInput').click();
+        // --- 3. 音声認識エンジン ---
+        const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+        const rec = SpeechRecognition ? new SpeechRecognition() : null;
+        if(rec) {
+            rec.lang = 'ja-JP'; rec.interimResults = true;
+            rec.onstart = () => { isRec = true; document.getElementById('micBtn').style.background = "#ef4444"; document.getElementById('micLabel').innerText = "きいてるよ"; };
+            rec.onend = () => { isRec = false; document.getElementById('micBtn').style.background = "#38bdf8"; document.getElementById('micLabel').innerText = "おしてね"; };
+            rec.onresult = (e) => { if(e.results[e.resultIndex].isFinal) sendToGas(e.results[e.resultIndex][0].transcript); };
+        }
+
+        function toggleMic() { if(!rec) { alert("マイクが使えないよ"); return; } isRec ? rec.stop() : rec.start(); }
+
+        async function sendToGas(text) {
+            try {
+                const res = await fetch(`${GAS_URL}?text=${encodeURIComponent(text)}`);
+                const d = await res.json();
+                if(d.words_all) {
+                    appData[activeId].words.push(...d.words_all);
+                    appData[activeId].kanji = appData[activeId].words.map(w => w.surface).join('');
+                    renderEditor();
+                }
+            } catch(e) { alert("こえを文字にできなかったよ。ネットはつながってるかな？"); }
+        }
+
+        // --- 4. 写真処理 ---
+        function handlePhotos(input) {
+            const files = Array.from(input.files);
+            files.forEach(file => {
+                if(appData.photos.length >= 4) return;
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const max = 500; let w = img.width, h = img.height;
+                        if(w > h) { if(w > max){ h *= max/w; w = max; } } else { if(h > max){ w *= max/h; h = max; } }
+                        canvas.width = w; canvas.height = h;
+                        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                        appData.photos.push(canvas.toDataURL('image/jpeg', 0.6));
+                        refreshTiles();
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // --- 5. 描画更新 ---
+        function renderEditor() {
+            const lv = parseInt(document.getElementById('gradeMode').value);
+            const allowed = (l) => { let s=""; for(let i=1;i<=l;i++) s+=KANJI_LISTS[i]||""; return s; }(lv);
+            let html = "";
+            appData[activeId].words.forEach(w => {
+                const f = w.furigana || w.surface;
+                if(lv === 0) html += f; else if(lv === 99) html += w.surface;
+                else {
+                    let can = true; for(let char of w.surface){ if(char >= '\u4e00' && char <= '\u9faf' && !allowed.includes(char)) can = false; }
+                    html += can ? w.surface : f;
+                }
+            });
+            document.getElementById('richDisplay').innerHTML = html;
+            document.getElementById('kanjiDisplay').innerText = appData[activeId].kanji;
+        }
+
+        function refreshTiles() {
+            const lv = parseInt(document.getElementById('gradeMode').value);
+            const allowed = (l) => { let s=""; for(let i=1;i<=l;i++) s+=KANJI_LISTS[i]||""; return s; }(lv);
+            // 文字タイルの更新
+            ['t1','t2','t3','t4'].forEach(id => {
+                let txt = "";
+                appData[id].words.forEach(w => {
+                    const f = w.furigana || w.surface;
+                    if(lv === 0) txt += f; else if(lv === 99) txt += w.surface;
+                    else {
+                        let can = true; for(let char of w.surface){ if(char >= '\u4e00' && char <= '\u9faf' && !allowed.includes(char)) can = false; }
+                        txt += can ? w.surface : f;
+                    }
+                });
+                document.getElementById('p-' + id).innerText = txt || "タップして かく";
+            });
+            // 写真タイルの更新
+            const photoGrid = document.getElementById('photoGrid');
+            photoGrid.innerHTML = appData.photos.map(src => `<img src="${src}" class="photo-item">`).join('');
+            document.getElementById('photoCount').innerText = appData.photos.length > 0 ? "" : "しゃしんを えらぶ";
         }
     </script>
 
     <style>
-        body { height: 100dvh; background-color: #fffbeb; margin: 0; font-family: sans-serif; }
+        body { height: 100dvh; background-color: #fffbeb; margin: 0; overflow: hidden; }
         .tile-btn { 
             background: white; border: 4px solid #ffedd5; border-radius: 1.5rem; padding: 1rem;
             display: flex; flex-direction: column; width: 100%; height: 140px; text-align: left;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
         }
-        .tile-label { color: #fb923c; font-weight: 900; font-size: 0.8rem; margin-bottom: 0.5rem; }
-        .tile-preview { flex: 1; color: #4b5563; font-weight: bold; overflow: hidden; font-size: 1rem; }
+        .tile-label { color: #fb923c; font-weight: 900; font-size: 0.8rem; margin-bottom: 0.3rem; }
+        .tile-preview { flex: 1; color: #4b5563; font-weight: bold; overflow: hidden; font-size: 1.1rem; line-height: 1.2; word-break: break-all; }
         
-        #editorOverlay { 
-            position: fixed; inset: 0; background: #fffbeb; z-index: 9999; 
-            display: none; flex-direction: column; padding: 1rem;
-        }
-        #richDisplay { 
-            flex: 1; background: white; border: 4px solid #ffedd5; border-radius: 2rem;
-            padding: 1.5rem; font-size: 2rem; font-weight: 900; outline: none;
-        }
+        #editorOverlay { position: fixed; inset: 0; background: #fffbeb; z-index: 9999; display: none; flex-direction: column; padding: 1rem; }
+        #richDisplay { flex: 1; background: white; border: 4px solid #ffedd5; border-radius: 2rem; padding: 1.5rem; font-size: 2.2rem; font-weight: 900; outline: none; overflow-y: auto; }
+        
+        /* 写真グリッド */
+        .photo-grid-mini { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; width: 100%; height: 100%; }
+        .photo-item { width: 100%; height: 100%; object-fit: cover; border-radius: 0.5rem; background: #eee; }
     </style>
 </head>
-<body>
+<body class="p-3 select-none">
 
-    <div id="mainView" style="padding: 1rem;">
-        <div style="display: flex; justify-content: center; margin-bottom: 1rem;">
-            <h1 style="color: #fb923c; font-size: 1.2rem; font-weight: 900;">学びの足跡 v4.6</h1>
+    <div id="mainView" class="max-w-3xl mx-auto">
+        <div class="flex justify-between items-center mb-4">
+            <button class="bg-white border-2 border-orange-200 rounded-full px-4 py-1 text-xs font-black text-orange-400">🎁 きろく</button>
+            <h1 class="text-xl font-black text-orange-400 tracking-tighter">学びの足跡 v4.7</h1>
+            <select id="gradeMode" class="bg-orange-400 text-white font-black text-xs px-3 py-1 rounded-full border-2 border-white shadow-sm outline-none" onchange="refreshTiles()">
+                <option value="0">ひらがな</option><option value="1" selected>1ねんせい</option><option value="2">2ねんせい</option><option value="99">ぜんぶ</option>
+            </select>
         </div>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-            <button class="tile-btn" onclick="openEditor('t1')">
-                <div class="tile-label">めあて</div>
-                <div id="p-t1" class="tile-preview">タップして かく</div>
-            </button>
-            <button class="tile-btn" onclick="openEditor('t2')">
-                <div class="tile-label">できたこと</div>
-                <div id="p-t2" class="tile-preview">タップして かく</div>
-            </button>
-            <button class="tile-btn" onclick="openEditor('t3')">
-                <div class="tile-label">むずかしかった</div>
-                <div id="p-t3" class="tile-preview">タップして かく</div>
-            </button>
-            <button class="tile-btn" onclick="openEditor('t4')">
-                <div class="tile-label">つぎのこと</div>
-                <div id="p-t4" class="tile-preview">タップして かく</div>
-            </button>
-            <button class="tile-btn" style="grid-column: span 2; height: 100px;" onclick="triggerPhoto()">
-                <div class="tile-label">しゃしん</div>
-                <div id="photoStatus" class="tile-preview">しゃしんを えらぶ</div>
-                <input type="file" id="fileInput" accept="image/*" multiple style="display:none;">
+        <div class="grid grid-cols-2 gap-4">
+            <button class="tile-btn" onclick="openEditor('t1')"><div class="tile-label">めあて</div><div id="p-t1" class="tile-preview">タップして かく</div></button>
+            <button class="tile-btn" onclick="openEditor('t2')"><div class="tile-label">できたこと</div><div id="p-t2" class="tile-preview">タップして かく</div></button>
+            <button class="tile-btn" onclick="openEditor('t3')"><div class="tile-label">むずかしかった</div><div id="p-t3" class="tile-preview">タップして かく</div></button>
+            <button class="tile-btn" onclick="openEditor('t4')"><div class="tile-label">つぎのこと</div><div id="p-t4" class="tile-preview">タップして かく</div></button>
+            
+            <button class="tile-btn col-span-2" style="height: 120px;" onclick="document.getElementById('fileInput').click()">
+                <div class="tile-label">しゃしん (4まいまで)</div>
+                <div id="photoGrid" class="photo-grid-mini"></div>
+                <div id="photoCount" class="text-xs text-gray-300 font-bold">しゃしんを えらぶ</div>
+                <input type="file" id="fileInput" accept="image/*" multiple style="display:none;" onchange="handlePhotos(this)">
             </button>
         </div>
         
-        <button onclick="alert('ほぞんしました！')" style="width: 100%; background: #fb923c; color: white; border: none; border-radius: 1rem; padding: 1.5rem; margin-top: 1rem; font-weight: 900; font-size: 1.2rem;">
-            ぜんぶ ほぞんする 💰
-        </button>
+        <button onclick="alert('たからばこに ほぞんしたよ！'); location.reload();" class="w-full bg-orange-400 border-4 border-orange-100 rounded-2xl py-4 shadow-lg active:scale-95 text-white font-black text-xl mt-4">ぜんぶ ほぞんする 💰</button>
     </div>
 
     <div id="editorOverlay">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem;">
-            <button onclick="closeEditor(false)" style="color: #999; font-weight: bold; border: none; background: none; font-size: 1.2rem;">やめる</button>
-            <div id="editorTitle" style="color: #fb923c; font-weight: 900; font-size: 1.2rem;">編集</div>
-            <button onclick="closeEditor(true)" style="background: #fb923c; color: white; border: none; padding: 0.5rem 1.5rem; border-radius: 2rem; font-weight: 900;">決定</button>
+        <div class="flex justify-between items-center mb-3">
+            <button onclick="closeEditor(false)" class="text-gray-400 font-black text-lg p-2">✖ やめる</button>
+            <div id="editorTitle" class="text-orange-400 font-black text-xl">編集</div>
+            <button onclick="closeEditor(true)" class="bg-orange-400 text-white px-8 py-2 rounded-full font-black shadow-md">決定 ✅</button>
         </div>
         
         <div id="richDisplay" contenteditable="true"></div>
+        <div id="kanjiDisplay" class="text-xs font-bold text-gray-300 italic opacity-60 mt-1"></div>
 
-        <div style="margin-top: 1rem; display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-            <button onclick="alert('マイクを準備中')" style="background: #38bdf8; color: white; border: none; padding: 1.5rem; border-radius: 1.5rem; font-weight: 900; font-size: 1.2rem;">おしてね</button>
-            <button onclick="document.execCommand('delete')" style="background: white; color: #fb923c; border: 4px solid #ffedd5; padding: 1.5rem; border-radius: 1.5rem; font-weight: 900; font-size: 1.2rem;">1字けす</button>
+        <div class="grid grid-cols-2 gap-4 mt-4">
+            <button id="micBtn" onclick="toggleMic()" class="bg-sky-400 border-4 border-sky-100 rounded-2xl py-6 shadow-lg active:scale-95 text-white font-black text-2xl"><span id="micLabel">おしてね</span></button>
+            <button onclick="appData[activeId].words.pop(); appData[activeId].kanji = appData[activeId].words.map(w=>w.surface).join(''); renderEditor();" class="bg-white border-4 border-orange-100 rounded-2xl py-6 shadow-lg active:scale-95 text-orange-400 font-black text-2xl">1字けす</button>
         </div>
     </div>
 
