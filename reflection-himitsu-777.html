@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ひらがな スケッチブック Pro v2</title>
+    <title>ひらがな スケッチブック Pro v26</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .sketchbook { background-image: radial-gradient(#e5e7eb 1px, transparent 1px); background-size: 20px 20px; }
@@ -14,7 +14,7 @@
 </head>
 <body class="bg-amber-50 h-screen flex flex-col items-center p-4 overflow-hidden">
 
-    <h1 class="text-2xl font-black text-orange-400 my-1 tracking-tighter">ひらがな スケッチブック</h1>
+    <h1 class="text-2xl font-black text-orange-400 my-1 tracking-tighter text-center">ひらがな スケッチブック</h1>
 
     <div class="flex-1 w-full max-w-3xl bg-white rounded-3xl shadow-inner border-4 border-orange-100 p-6 mb-2 flex flex-col sketchbook relative">
         <textarea id="output" 
@@ -25,25 +25,31 @@
     </div>
 
     <div class="w-full max-w-4xl grid grid-cols-5 gap-2 mb-6">
+        
         <button id="clearBtn" class="bg-white border-2 border-gray-200 rounded-2xl flex flex-col items-center justify-center py-2 active:bg-gray-100 transition-all">
             <span class="text-3xl">🧹</span>
             <span class="text-[10px] font-bold text-gray-400">ぜんぶ消す</span>
         </button>
+
         <button id="backspaceBtn" class="bg-white border-2 border-orange-200 rounded-2xl flex flex-col items-center justify-center py-2 active:bg-orange-50 transition-all">
             <span class="text-3xl">⌫</span>
             <span class="text-[10px] font-bold text-orange-400 font-black">1字けす</span>
         </button>
+
         <button id="newLineBtn" class="bg-white border-2 border-gray-200 rounded-2xl flex flex-col items-center justify-center py-2 active:bg-gray-100 transition-all">
             <span class="text-3xl">⏎</span>
             <span class="text-[10px] font-bold text-gray-400 font-black">つぎの行</span>
         </button>
+
         <button id="listenBtn" class="bg-green-400 border-4 border-green-100 rounded-2xl flex flex-col items-center justify-center py-2 shadow-lg active:scale-95 transition-all">
             <span class="text-3xl">📢</span>
             <span class="text-white text-[10px] font-black italic">きいてみる</span>
         </button>
+
         <button id="micBtn" class="bg-sky-400 border-4 border-sky-100 rounded-2xl flex flex-col items-center justify-center py-2 shadow-lg active:scale-95 transition-all outline-none">
             <span id="btnLabel" class="text-white text-xl font-black italic">おしてね</span>
         </button>
+
     </div>
 
     <script>
@@ -63,21 +69,19 @@
 
         // --- 自然な読み上げのためのボイス設定 ---
         let voices = [];
-        function setVoiceList() {
+        const loadVoices = () => {
             voices = window.speechSynthesis.getVoices();
-        }
-        setVoiceList();
-        if (window.speechSynthesis.onvoiceschanged !== undefined) {
-            window.speechSynthesis.onvoiceschanged = setVoiceList;
-        }
+        };
+        // ボイスのロード待ち（iOS/Safari対策）
+        window.speechSynthesis.onvoiceschanged = loadVoices;
+        loadVoices();
 
-        // 高品質な日本語ボイスを探す関数
-        function getBestJapaneseVoice() {
+        function getBestVoice() {
             const jpVoices = voices.filter(v => v.lang === 'ja-JP');
-            // 1. Siriボイス、2. Enhanced（拡張）ボイス、3. Google、4. その他 の順で探す
-            return jpVoices.find(v => v.name.includes('Siri')) || 
+            // Siri(Voice 2) -> Siri -> Enhanced -> 最初の日本語音声 の順で検索
+            return jpVoices.find(v => v.name.includes('Siri') && v.name.includes('2')) ||
+                   jpVoices.find(v => v.name.includes('Siri')) ||
                    jpVoices.find(v => v.name.includes('Enhanced')) ||
-                   jpVoices.find(v => v.name.includes('Google')) ||
                    jpVoices[0];
         }
 
@@ -93,17 +97,17 @@
                 else { recognition.stop(); btnLabel.innerText = "WAIT"; }
             };
 
-            // 自然な読み上げの実行
+            // 強化された読み上げ機能
             listenBtn.onclick = () => {
-                window.speechSynthesis.cancel(); // 前の音声を止める
+                window.speechSynthesis.cancel(); // 二重再生防止
                 const uttr = new SpeechSynthesisUtterance(output.value);
                 
-                const bestVoice = getBestJapaneseVoice();
-                if (bestVoice) uttr.voice = bestVoice;
-
+                const voice = getBestVoice();
+                if (voice) uttr.voice = voice;
+                
                 uttr.lang = 'ja-JP';
-                uttr.rate = 0.9;  // 少しゆっくり（0.1〜10）
-                uttr.pitch = 1.1; // 少し高めの可愛い声（0〜2）
+                uttr.rate = 0.95; // わずかにゆっくり
+                uttr.pitch = 1.0;
                 
                 window.speechSynthesis.speak(uttr);
             };
@@ -165,22 +169,23 @@
         }
 
         async function sendToGas(text) {
-    try {
-        const res = await fetch(`${GAS_URL}?text=${encodeURIComponent(text)}`);
-        const data = await res.json();
-        if (data.words) {
-            const newText = data.words.join('');
-            const start = output.selectionStart;
-            output.value = output.value.substring(0, start) + newText + output.value.substring(start);
-            output.selectionStart = output.selectionEnd = start + newText.length;
-            output.focus();
-            preview.innerText = "";
+            try {
+                const res = await fetch(`${GAS_URL}?text=${encodeURIComponent(text)}`);
+                const data = await res.json();
+                if (data.words) {
+                    const newText = data.words.join('');
+                    const start = output.selectionStart;
+                    const end = output.selectionEnd;
+                    const val = output.value;
+                    output.value = val.substring(0, start) + newText + val.substring(end);
+                    output.selectionStart = output.selectionEnd = start + newText.length;
+                    output.focus();
+                    preview.innerText = "";
+                }
+            } catch (e) {
+                preview.innerText = "エラー：つうしんを かくにんしてね";
+            }
         }
-    } catch (e) {
-        // ★ ここを書き換え！
-        showError("エラー詳細", e.message + " (URLが正しいか確認してね)");
-    }
-}
     </script>
 </body>
 </html>
