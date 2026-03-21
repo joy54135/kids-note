@@ -3,15 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ひらがな めがね</title>
+    <title>ひらがな めがね Ver.4.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
+        /* ひらがなカードが弾むアニメーション */
         @keyframes pop {
             0% { transform: scale(0.5) rotate(-5deg); opacity: 0; }
             70% { transform: scale(1.1) rotate(2deg); }
             100% { transform: scale(1) rotate(0); opacity: 1; }
         }
         .word-card { animation: pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        
+        /* 録音中の赤い波紋 */
         .pulse-red { animation: pulse 1.5s infinite; }
         @keyframes pulse {
             0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
@@ -20,23 +23,28 @@
         }
     </style>
 </head>
-<body class="bg-amber-50 h-screen flex flex-col items-center justify-between p-6 overflow-hidden select-none">
+<body class="bg-[#FFFDF0] h-screen flex flex-col items-center justify-between p-6 overflow-hidden select-none">
 
-    <h1 class="text-3xl font-black text-orange-400 mt-4">ひらがな めがね4</h1>
+    <h1 class="text-3xl font-black text-orange-400 mt-4 tracking-widest">ひらがな めがね</h1>
 
-    <div id="display" class="flex flex-wrap justify-center gap-4 w-full h-2/3 content-center text-center">
-        <p id="msg" class="text-xl text-orange-300 font-bold px-4">ボタンを おしてね</p>
-        <div id="debug-error" class="text-xs text-red-400 mt-2 block w-full"></div>
+    <div id="display-container" class="flex-1 w-full flex flex-col items-center justify-center">
+        <div id="display" class="flex flex-wrap justify-center gap-4 w-full content-center text-center">
+            <p id="msg" class="text-2xl text-orange-300 font-bold px-4">したの ボタンを おしてね</p>
+        </div>
+        <div id="status-bar" class="mt-4 text-xs font-mono text-gray-400"></div>
     </div>
 
-    <div class="mb-12 relative">
-        <button id="micBtn" class="w-44 h-44 bg-sky-400 border-[12px] border-sky-100 rounded-full shadow-2xl flex items-center justify-center active:scale-95 transition-all outline-none">
-            <span id="btnLabel" class="text-white text-2xl font-black italic">おしてね</span>
+    <div class="mb-12 relative flex flex-col items-center">
+        <button id="micBtn" class="w-44 h-44 bg-sky-400 border-[12px] border-sky-100 rounded-full shadow-2xl flex items-center justify-center active:scale-90 transition-all outline-none">
+            <span id="btnLabel" class="text-white text-3xl font-black italic">おしてね</span>
         </button>
+        <div id="error-log" class="absolute -bottom-8 text-xs text-red-400 font-bold whitespace-nowrap"></div>
     </div>
 
     <script>
-        const GAS_URL = 'https://script.google.com/macros/s/AKfycbybLwyxjbmQ2jevT8Fq3EzVipexUzb6sL1d4N6KrDYJHI3zMfpjjOSHRxDE_QOuKRMw/exec';
+        // --- 設定 (ここを書き換えてください) ---
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbxtAeXcLqUk7UukAAUeEZ15CcrtkKPhyfVqp8u20cpaEYQAY-7S2cDD1Ls2m5XzrAnu/exec';
+        
         const sounds = {
             start: new Audio('https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3'),
             stop: new Audio('https://assets.mixkit.co/active_storage/sfx/2568/2568-preview.mp3'),
@@ -46,60 +54,81 @@
         const micBtn = document.getElementById('micBtn');
         const btnLabel = document.getElementById('btnLabel');
         const msg = document.getElementById('msg');
-        const debugErr = document.getElementById('debug-error');
+        const statusBar = document.getElementById('status-bar');
+        const errorLog = document.getElementById('error-log');
 
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         let isRunning = false;
-        let isDebouncing = false; // 連打防止フラグ
+        let isDebouncing = false;
 
         if (!SpeechRecognition) {
             msg.innerText = "Safariで ひらいてね";
         } else {
             const recognition = new SpeechRecognition();
             recognition.lang = 'ja-JP';
-            recognition.interimResults = false; 
+            recognition.interimResults = true; // 途中の言葉も表示して「反応してる感」を出す
             recognition.continuous = false;
 
             micBtn.onclick = () => {
-                if (isDebouncing) return; // 0.5秒以内の連打は無視
-                
+                if (isDebouncing) return;
                 isDebouncing = true;
-                setTimeout(() => { isDebouncing = false; }, 500);
+                setTimeout(() => { isDebouncing = false; }, 600);
 
                 if (!isRunning) {
-                    // --- 開始処理 ---
-                    debugErr.innerText = "";
-                    sounds.start.play().catch(() => {});
-                    try {
-                        recognition.start();
-                    } catch(e) {
-                        debugErr.innerText = "もういちど おしてね";
-                    }
+                    startProcess();
                 } else {
-                    // --- 手動終了処理 ---
-                    sounds.stop.play().catch(() => {});
-                    recognition.stop(); // 録音を止めて結果待ちに移行
-                    btnLabel.innerText = "おわり";
+                    stopProcess();
                 }
             };
+
+            function startProcess() {
+                errorLog.innerText = "";
+                statusBar.innerText = "マイクを 準備中...";
+                sounds.start.play().catch(() => {});
+                try {
+                    recognition.start();
+                } catch(e) {
+                    errorLog.innerText = "エラー: もう一度おしてね";
+                }
+            }
+
+            function stopProcess() {
+                sounds.stop.play().catch(() => {});
+                recognition.stop();
+                btnLabel.innerText = "おわり";
+            }
 
             recognition.onstart = () => {
                 isRunning = true;
                 micBtn.classList.add('bg-red-500', 'border-red-200', 'pulse-red');
                 micBtn.classList.remove('bg-sky-400', 'border-sky-100');
                 btnLabel.innerText = "おわる";
-                msg.innerText = "おわるときは もういちど おしてね";
+                msg.innerText = "なにか はなしてみてね！";
+                statusBar.innerText = "きいています...";
             };
 
             recognition.onresult = (event) => {
                 const transcript = event.results[0][0].transcript;
-                msg.innerText = "「" + transcript + "」を かんがえちゅう...";
-                sendToGas(transcript);
+                const isFinal = event.results[0].isFinal;
+                
+                // 途中経過をリアルタイム表示
+                msg.innerText = "「" + transcript + "」...";
+                
+                if (isFinal) {
+                    msg.innerText = "「" + transcript + "」を ひらがなにするよ...";
+                    statusBar.innerText = "GASへ 送信中...";
+                    sendToGas(transcript);
+                }
             };
 
             recognition.onerror = (event) => {
-                if (event.error !== 'no-speech' && event.error !== 'aborted') {
-                    debugErr.innerText = "エラー: " + event.error;
+                isRunning = false;
+                if (event.error === 'no-speech') {
+                    errorLog.innerText = "こえが きこえなかったよ";
+                } else if (event.error === 'aborted') {
+                    // 何もしない（手動停止時に出るため）
+                } else {
+                    errorLog.innerText = "エラー: " + event.error;
                 }
             };
 
@@ -109,38 +138,29 @@
                 micBtn.classList.add('bg-sky-400', 'border-sky-100');
                 btnLabel.innerText = "おしてね";
                 if (msg.innerText.includes("はなしてみてね")) {
-                    msg.innerText = "ボタンを おしてね";
+                    msg.innerText = "したの ボタンを おしてね";
+                    statusBar.innerText = "";
                 }
             };
         }
 
         async function sendToGas(text) {
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 5000); // 5秒でタイムアウト
-
             try {
                 const targetUrl = `${GAS_URL}?text=${encodeURIComponent(text)}`;
-                const res = await fetch(targetUrl, { signal: controller.signal });
+                const res = await fetch(targetUrl);
                 const data = await res.json();
                 
-                clearTimeout(timeoutId);
-
                 if (data.words) {
+                    statusBar.innerText = "ひらがな 成功！";
                     renderWords(data.words);
                     sounds.success.play().catch(() => {});
                     msg.innerText = "";
-                } else if (data.error) {
-                    debugErr.innerText = "GASエラー: " + data.error;
-                    msg.innerText = "ちょっと まってね";
+                } else {
+                    statusBar.innerText = "GASの 返信エラー";
                 }
             } catch (e) {
-                clearTimeout(timeoutId);
-                if (e.name === 'AbortError') {
-                    debugErr.innerText = "通信おそすぎ（タイムアウト）";
-                } else {
-                    debugErr.innerText = "通信失敗: " + e.message;
-                }
-                msg.innerText = "もういちど はなしてね";
+                statusBar.innerText = "通信エラー: " + e.message;
+                errorLog.innerText = "ネットが つながらないよ";
             }
         }
 
@@ -150,7 +170,7 @@
             words.forEach((word, i) => {
                 const card = document.createElement('div');
                 card.className = 'word-card bg-white border-b-8 border-orange-100 rounded-3xl p-6 shadow-xl m-2';
-                card.innerHTML = `<span class="text-6xl font-black text-gray-700">${word}</span>`;
+                card.innerHTML = `<span class="text-6xl font-black text-gray-700 leading-none">${word}</span>`;
                 card.style.animationDelay = `${i * 0.1}s`;
                 display.appendChild(card);
             });
