@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>ふりかえり たからばこ v52</title>
+    <title>ふりかえり たからばこ v53</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
@@ -117,7 +117,6 @@
     <script>
         const GAS_URL = 'https://script.google.com/macros/s/AKfycbxxE14tNshFIqZHwzhyGQtRDeSazD9aPex9Tm0gIGJjmUvd8jAiFN-bkQyNIt_D9cV_/exec';
         
-        // 音響
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         function playSfx(freq, type, duration, startTime = 0) {
             const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
@@ -155,13 +154,23 @@
         const photoPreview = document.getElementById('photoPreview');
         const fileInput = document.getElementById('fileInput');
 
-        // ★ 文字データを1文字単位で管理する仕組み
-        let masterData = []; // {s: '天', f: 'てんき'} 形式
+        let masterData = []; 
         let isHistoryView = false; let isRunning = false; let attachedImages = []; let lastCursorPosition = 0;
 
         function isKanji(ch) { return (ch >= '\u4e00' && ch <= '\u9faf'); }
         function getGradeLevel() { return parseInt(gradeMode.value); }
         function getAllowedKanji(lv) { let list = ""; for (let i = 1; i <= lv; i++) list += KANJI_LISTS[i] || ""; return list; }
+
+        // ★ 句読点の自動補完ロジック
+        function addPunctuation(text) {
+            if (!text) return "";
+            let t = text.replace(/\s+/g, ""); // スペース削除
+            // 接続詞の後の読点
+            t = t.replace(/(だけど|だから|でも|それで|そして|あとは|それから)/g, "$1、");
+            // 文末の句点（すでに句読点がある場合は重ねない）
+            if (!/[。？！?!]$/.test(t)) t += "。";
+            return t;
+        }
 
         function smartConvert(text, lv) {
             if (lv === 99) return text;
@@ -185,7 +194,6 @@
             set("label-modal-cancel", "やめる"); set("label-confirm-no", "いいえ"); set("label-history-back", "戻る");
         }
 
-        // 上下のテキストを同時に描画する最強の関数
         function renderDisplay() {
             const lv = getGradeLevel();
             const allowed = getAllowedKanji(lv);
@@ -195,10 +203,14 @@
             masterData.forEach(item => {
                 if (item.s === "\n") { upperHtml += "<br>"; lowerText += "\n"; return; }
                 
-                // 下（漢字）は常に元の漢字を表示
                 lowerText += item.s;
 
-                // 上（大きな文字）は学年モードで判定
+                // 句読点の場合はルビ（f）を無視してそのまま表示
+                if (/[、。！？!?]/.test(item.s)) {
+                    upperHtml += item.s;
+                    return;
+                }
+
                 if (lv === 0) { upperHtml += item.f || item.s; }
                 else if (lv === 99) { upperHtml += item.s; }
                 else {
@@ -215,13 +227,12 @@
 
         gradeMode.onchange = () => { sfx.click(); renderDisplay(); };
 
-        // 挿入位置の特定
         function getCursorCharacterOffset(element) {
             let offset = 0; const selection = window.getSelection();
             if (selection.rangeCount > 0) {
                 const range = selection.getRangeAt(0); const preCaretRange = range.cloneRange();
                 preCaretRange.selectNodeContents(element); preCaretRange.setEnd(range.endContainer, range.endOffset);
-                offset = preCaretRange.toString().replace(/\n/g, "").length; // 改行を除外してカウント
+                offset = preCaretRange.toString().replace(/\n/g, "").length; 
             }
             return offset;
         }
@@ -251,7 +262,7 @@
             photoPreview.innerHTML = attachedImages.map((src, i) => `<img src="${src}" class="photo-thumb" onclick="sfx.click(); attachedImages.splice(${i},1); renderPhotoPreview();">`).join('');
         }
 
-        // モーダル
+        // モーダル処理
         function openSubjectModal(forHistory) {
             sfx.pop(); isHistoryView = forHistory; const lv = getGradeLevel();
             const grid = document.getElementById('subjectGrid'); grid.innerHTML = "";
@@ -320,7 +331,6 @@
             };
             document.getElementById('clearBtn').onclick = () => { sfx.click(); if(confirm("全部消す？")) { masterData = []; attachedImages = []; renderPhotoPreview(); renderDisplay(); } };
             
-            // ★ バックスペースキーもマスターデータを直接変更
             document.getElementById('backspaceBtn').onclick = () => {
                 sfx.click(); 
                 const pos = getCursorCharacterOffset(ricDisplay);
@@ -341,12 +351,15 @@
             rec.onstart = () => { isRunning = true; document.getElementById('micBtn').classList.add('bg-red-500', 'pulse-red'); updateUI(); };
             rec.onresult = (e) => {
                 let final = ''; for (let i = e.resultIndex; i < e.results.length; i++) if (e.results[i].isFinal) final += e.results[i][0].transcript;
-                if (final) sendToGas(final);
+                if (final) {
+                    // ★ 送信前に句読点を補完
+                    const polishedText = addPunctuation(final);
+                    sendToGas(polishedText);
+                }
             };
             rec.onend = () => { isRunning = false; document.getElementById('micBtn').classList.remove('bg-red-500', 'pulse-red'); updateUI(); preview.innerText = ""; };
         }
 
-        // カーソル位置を戻すための補助関数
         function setCursorPosition(el, pos) {
             const range = document.createRange(); const sel = window.getSelection();
             let currentPos = 0; let node = null;
@@ -368,15 +381,13 @@
                 const res = await fetch(`${GAS_URL}?text=${encodeURIComponent(text)}`);
                 const d = await res.json();
                 if (d.words_all) {
-                    // 届いた単語を1文字ずつに分解してマスターデータに挿入
                     let newChars = [];
                     d.words_all.forEach(w => {
                         if (w.surface.length === 1) {
                             newChars.push({s: w.surface, f: w.furigana});
                         } else {
-                            // 複数文字の単語（天気など）を1文字ずつに分ける
                             for (let i=0; i<w.surface.length; i++) {
-                                newChars.push({s: w.surface[i], f: i === 0 ? w.furigana : ""}); // 読みは最初の1文字に付ける
+                                newChars.push({s: w.surface[i], f: i === 0 ? w.furigana : ""});
                             }
                         }
                     });
@@ -387,11 +398,9 @@
             } catch (e) {}
         }
 
-        // 直接入力された場合もマスターデータを更新
         ricDisplay.oninput = (e) => {
             if (e.inputType === "insertText" || e.inputType === "deleteContentBackward") {
                 const text = ricDisplay.innerText;
-                // ※本来は再解析が必要だが、ここでは簡易的に同期
                 const newMaster = [];
                 for(let char of text) { newMaster.push({s: char, f: char}); }
                 masterData = newMaster;
