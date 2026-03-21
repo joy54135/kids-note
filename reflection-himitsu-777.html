@@ -115,17 +115,32 @@
         }
 
         async function sendToGas(text) {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 5000); // 5秒でタイムアウト
+
             try {
                 const targetUrl = `${GAS_URL}?text=${encodeURIComponent(text)}`;
-                const res = await fetch(targetUrl);
+                const res = await fetch(targetUrl, { signal: controller.signal });
                 const data = await res.json();
+                
+                clearTimeout(timeoutId);
+
                 if (data.words) {
                     renderWords(data.words);
                     sounds.success.play().catch(() => {});
                     msg.innerText = "";
+                } else if (data.error) {
+                    debugErr.innerText = "GASエラー: " + data.error;
+                    msg.innerText = "ちょっと まってね";
                 }
             } catch (e) {
-                debugErr.innerText = "GASのURLは あってるかな？";
+                clearTimeout(timeoutId);
+                if (e.name === 'AbortError') {
+                    debugErr.innerText = "通信おそすぎ（タイムアウト）";
+                } else {
+                    debugErr.innerText = "通信失敗: " + e.message;
+                }
+                msg.innerText = "もういちど はなしてね";
             }
         }
 
