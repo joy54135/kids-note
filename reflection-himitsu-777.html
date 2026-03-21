@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>ふりかえり たからばこ v48</title>
+    <title>ふりかえり たからばこ v49</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
@@ -11,9 +11,10 @@
         .pulse-red { animation: pulse 1.5s infinite; }
         @keyframes pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 50% { box-shadow: 0 0 0 20px rgba(239, 68, 68, 0); } }
         .suck-in { transition: all 0.8s cubic-bezier(0.6, -0.28, 0.735, 0.045); transform: scale(0) translate(200px, 400px) rotate(20deg) !important; opacity: 0; }
-        .modal-bg { background-color: rgba(0,0,0,0.6); backdrop-filter: blur(8px); z-index: 1000; position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+        .modal-bg { background-color: rgba(0,0,0,0.7); backdrop-filter: blur(8px); z-index: 1000; position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 1rem; }
         .step-num { position: absolute; top: -6px; left: -6px; width: 28px; height: 28px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 16px; border: 3px solid currentColor; z-index: 20; }
         #richDisplay { caret-color: #38bdf8; outline: none; min-height: 100%; white-space: pre-wrap; word-break: break-all; }
+        .photo-thumb { width: 60px; height: 60px; object-fit: cover; border-radius: 12px; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
     </style>
 </head>
 <body class="bg-amber-50 p-3 select-none">
@@ -23,15 +24,15 @@
             <span class="text-2xl">🎁</span> <span id="label-history" class="text-sm font-black text-orange-400 italic">きろく</span>
         </button>
         <h1 id="label-title" class="text-xl font-black text-orange-400 tracking-tighter text-center flex-1">ふりかえり たからばこ</h1>
-        <select id="gradeMode" class="bg-orange-400 text-white font-black text-[10px] px-4 py-2 rounded-full border-2 border-white shadow-sm outline-none appearance-none">
-            <option value="0">ひらがなとカタカナ</option>
-            <option value="1" selected>1年生までの漢字</option>
-            <option value="2">2年生までの漢字</option>
-            <option value="3">3年生までの漢字</option>
-            <option value="4">4年生までの漢字</option>
-            <option value="5">5年生までの漢字</option>
-            <option value="6">6年生までの漢字</option>
-            <option value="99">ぜんぶの漢字</option>
+        <select id="gradeMode" class="bg-orange-400 text-white font-black text-xs px-4 py-2 rounded-full border-2 border-white shadow-sm outline-none appearance-none">
+            <option value="0">ひらがな</option>
+            <option value="1" selected>1ねんせい</option>
+            <option value="2">2ねんせい</option>
+            <option value="3">3ねんせい</option>
+            <option value="4">4ねんせい</option>
+            <option value="5">5ねんせい</option>
+            <option value="6">6ねんせい</option>
+            <option value="99">ぜんぶ</option>
         </select>
     </div>
 
@@ -39,6 +40,9 @@
         <div id="outputContainer" class="flex-1 overflow-y-auto min-h-0">
              <div id="richDisplay" contenteditable="true" class="text-5xl font-black text-gray-700 leading-tight w-full"></div>
         </div>
+        
+        <div id="photoPreview" class="flex gap-2 py-2 shrink-0"></div>
+
         <div id="kanjiDisplay" class="shrink-0 w-full text-lg font-bold text-gray-300 border-t border-gray-100 pt-2 italic opacity-60"></div>
         <div id="preview" class="shrink-0 text-2xl font-bold text-sky-300 italic pointer-events-none mt-1"></div>
     </div>
@@ -62,15 +66,19 @@
             </button>
         </div>
 
-        <div class="grid grid-cols-3 gap-4 px-4 pb-4">
-            <button id="clearBtn" class="bg-white border-2 border-gray-200 rounded-2xl py-2 active:bg-gray-100 flex items-center justify-center gap-3 shadow-sm">
-                <span class="text-2xl">🧹</span><span id="label-clear" class="text-sm font-black text-gray-400 text-center leading-none">全部<br>消す</span>
+        <div class="grid grid-cols-4 gap-2 px-1 pb-4">
+            <button id="clearBtn" class="bg-white border-2 border-gray-200 rounded-2xl py-2 active:bg-gray-100 flex items-center justify-center gap-1 shadow-sm">
+                <span class="text-xl">🧹</span><span id="label-clear" class="text-[10px] font-black text-gray-400">全部消す</span>
             </button>
-            <button id="backspaceBtn" class="bg-white border-2 border-orange-100 rounded-2xl py-2 active:bg-orange-50 flex items-center justify-center gap-3 shadow-sm">
-                <span class="text-2xl">⌫</span><span id="label-back" class="text-sm font-black text-orange-400 text-center leading-none">1字<br>けす</span>
+            <button id="backspaceBtn" class="bg-white border-2 border-orange-100 rounded-2xl py-2 active:bg-orange-50 flex items-center justify-center gap-1 shadow-sm">
+                <span class="text-xl">⌫</span><span id="label-back" class="text-[10px] font-black text-orange-400">1字けす</span>
             </button>
-            <button id="newLineBtn" class="bg-white border-2 border-gray-200 rounded-2xl py-2 active:bg-gray-100 flex items-center justify-center gap-3 shadow-sm">
-                <span class="text-2xl">⏎</span><span id="label-line" class="text-sm font-black text-gray-400 text-center leading-none">改行</span>
+            <button id="newLineBtn" class="bg-white border-2 border-gray-200 rounded-2xl py-2 active:bg-gray-100 flex items-center justify-center gap-1 shadow-sm">
+                <span class="text-xl">⏎</span><span id="label-line" class="text-[10px] font-black text-gray-400 text-center">改行</span>
+            </button>
+            <button id="cameraBtn" class="bg-sky-100 border-2 border-sky-200 rounded-2xl py-2 active:bg-sky-200 flex items-center justify-center gap-1 shadow-sm">
+                <span class="text-xl">📷</span><span class="text-[10px] font-black text-sky-500">しゃしん</span>
+                <input type="file" id="fileInput" accept="image/*" multiple class="hidden">
             </button>
         </div>
     </div>
@@ -94,10 +102,17 @@
     </div>
 
     <div id="historyDetailModal" class="hidden modal-bg">
-        <div class="bg-amber-50 rounded-3xl p-8 w-full max-w-2xl h-[85vh] shadow-2xl flex flex-col border-4 border-amber-200">
-            <h2 id="historyDetailTitle" class="text-3xl font-black text-amber-600 mb-6 text-center italic"></h2>
+        <div class="bg-amber-50 rounded-3xl p-6 w-full max-w-2xl h-[85vh] shadow-2xl flex flex-col border-4 border-amber-200">
+            <h2 id="historyDetailTitle" class="text-3xl font-black text-amber-600 mb-4 text-center italic"></h2>
             <div id="historyDetailList" class="flex-1 overflow-y-auto space-y-4 pr-2"></div>
             <button id="label-history-back" onclick="closeModal('historyDetailModal')" class="mt-6 bg-amber-400 text-white py-5 rounded-2xl font-black text-xl shadow-md">もどる</button>
+        </div>
+    </div>
+
+    <div id="photoViewerModal" class="hidden modal-bg" onclick="this.classList.add('hidden')">
+        <div class="flex flex-col gap-4 items-center w-full max-w-4xl">
+            <div id="photoList" class="flex flex-wrap justify-center gap-4"></div>
+            <p class="text-white font-bold">とじる</p>
         </div>
     </div>
 
@@ -107,26 +122,17 @@
         // 音響システム
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         function playSfx(freq, type, duration, startTime = 0) {
-            const osc = audioCtx.createOscillator();
-            const gain = audioCtx.createGain();
-            osc.type = type;
-            osc.frequency.setValueAtTime(freq, audioCtx.currentTime + startTime);
+            const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+            osc.type = type; osc.frequency.setValueAtTime(freq, audioCtx.currentTime + startTime);
             gain.gain.setValueAtTime(0.08, audioCtx.currentTime + startTime);
             gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + startTime + duration);
             osc.connect(gain); gain.connect(audioCtx.destination);
-            osc.start(audioCtx.currentTime + startTime); 
-            osc.stop(audioCtx.currentTime + startTime + duration);
+            osc.start(audioCtx.currentTime + startTime); osc.stop(audioCtx.currentTime + startTime + duration);
         }
         const sfx = {
             click: () => playSfx(600, 'sine', 0.1),
             pop: () => { playSfx(400, 'sine', 0.1); setTimeout(() => playSfx(800, 'sine', 0.1), 50); },
-            // ★ シャララララン（長いキラキラ音）
-            save: () => {
-                const notes = [1000, 1200, 1500, 1800, 2100, 2400, 2700, 3000];
-                notes.forEach((f, i) => {
-                    playSfx(f, 'sine', 0.8, i * 0.1);
-                });
-            }
+            save: () => { [1000, 1200, 1500, 1800, 2100, 2400, 2700, 3000].forEach((f, i) => playSfx(f, 'sine', 0.8, i * 0.1)); }
         };
 
         const KANJI_LISTS = {
@@ -150,18 +156,19 @@
         const preview = document.getElementById('preview');
         const canvas = document.getElementById('canvas');
         const gradeMode = document.getElementById('gradeMode');
-        
+        const photoPreview = document.getElementById('photoPreview');
+        const fileInput = document.getElementById('fileInput');
+
         let fullConversation = []; 
         let currentKanjiText = ""; 
         let isHistoryView = false;
         let isRunning = false;
+        let attachedImages = []; // 保存用Base64配列
 
         function isKanji(ch) { return (ch >= '\u4e00' && ch <= '\u9faf'); }
         function getGradeLevel() { return parseInt(gradeMode.value); }
         function getAllowedKanji(lv) {
-            let list = "";
-            for (let i = 1; i <= lv; i++) list += KANJI_LISTS[i] || "";
-            return list;
+            let list = ""; for (let i = 1; i <= lv; i++) list += KANJI_LISTS[i] || ""; return list;
         }
 
         function smartConvert(text, lv) {
@@ -181,74 +188,81 @@
         function updateUI() {
             const lv = getGradeLevel();
             const set = (id, txt) => { const el = document.getElementById(id); if (el) el.innerText = smartConvert(txt, lv); };
-            set("label-history", "記録");
-            set("label-title", "ふりかえり たからばこ");
-            set("label-mic", isRunning ? "キャンセル" : "おしてね");
-            set("label-mic-sub", "お話しする");
-            set("label-listen", "きいてみる");
-            set("label-save", "保存する");
-            set("label-clear", "全部消す");
-            set("label-back", "1字けす");
-            set("label-line", "改行");
+            set("label-history", "記録"); set("label-title", "ふりかえり たからばこ");
+            set("label-mic", isRunning ? "キャンセル" : "おしてね"); set("label-mic-sub", "お話しする");
+            set("label-listen", "きいてみる"); set("label-save", "保存する");
+            set("label-clear", "全部消す"); set("label-back", "1字けす"); set("label-line", "改行");
             set("label-modal-title", isHistoryView ? "どれを 見たい？" : "どの 教科？");
-            set("label-modal-cancel", "やめる");
-            set("label-confirm-no", "いいえ");
-            set("label-history-back", "戻る");
+            set("label-modal-cancel", "やめる"); set("label-confirm-no", "いいえ"); set("label-history-back", "戻る");
         }
 
         function renderDisplay() {
-            const lv = getGradeLevel();
-            let html = "";
-            const allowed = getAllowedKanji(lv);
+            const lv = getGradeLevel(); let html = ""; const allowed = getAllowedKanji(lv);
             fullConversation.forEach(word => {
                 if (word.surface === "\n") { html += "<br>"; return; }
                 const furigana = word.furigana || word.surface;
-                if (lv === 0) html += furigana;
-                else if (lv === 99) html += word.surface;
+                if (lv === 0) html += furigana; else if (lv === 99) html += word.surface;
                 else {
-                    let canShow = true;
-                    for (let char of word.surface) { if (isKanji(char) && !allowed.includes(char)) canShow = false; }
+                    let canShow = true; for (let char of word.surface) { if (isKanji(char) && !allowed.includes(char)) canShow = false; }
                     html += canShow ? word.surface : furigana;
                 }
             });
-            ricDisplay.innerHTML = html;
-            kanjiDisplay.innerText = currentKanjiText;
-            updateUI();
+            ricDisplay.innerHTML = html; kanjiDisplay.innerText = currentKanjiText; updateUI();
         }
 
         gradeMode.onchange = renderDisplay;
 
+        // --- 画像処理 ---
+        document.getElementById('cameraBtn').onclick = () => fileInput.click();
+        fileInput.onchange = (e) => {
+            const files = Array.from(e.target.files);
+            files.forEach(file => {
+                if (attachedImages.length >= 3) return;
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    // 保存容量を節約するためリサイズ
+                    const img = new Image();
+                    img.onload = () => {
+                        const canvas = document.createElement('canvas');
+                        const MAX_SIZE = 800;
+                        let w = img.width, h = img.height;
+                        if (w > h) { if (w > MAX_SIZE) { h *= MAX_SIZE / w; w = MAX_SIZE; } }
+                        else { if (h > MAX_SIZE) { w *= MAX_SIZE / h; h = MAX_SIZE; } }
+                        canvas.width = w; canvas.height = h;
+                        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                        const base64 = canvas.toDataURL('image/jpeg', 0.7);
+                        attachedImages.push(base64);
+                        renderPhotoPreview();
+                    };
+                    img.src = ev.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        };
+
+        function renderPhotoPreview() {
+            photoPreview.innerHTML = attachedImages.map((src, i) => `<img src="${src}" class="photo-thumb" onclick="attachedImages.splice(${i},1); renderPhotoPreview();">`).join('');
+        }
+
+        // --- モーダル ---
         function openSubjectModal(forHistory) {
-            sfx.pop();
-            isHistoryView = forHistory;
-            const lv = getGradeLevel();
-            const grid = document.getElementById('subjectGrid');
-            grid.innerHTML = "";
-            let subjects = lv >= 3 || lv === 99 ? 
-                ["国語", "算数", "社会", "理科", "音楽", "図工", "体育", "道徳", "外国語"] : 
-                ["国語", "算数", "生活", "音楽", "図工", "体育", "道徳"];
+            sfx.pop(); isHistoryView = forHistory; const lv = getGradeLevel();
+            const grid = document.getElementById('subjectGrid'); grid.innerHTML = "";
+            let subjects = lv >= 3 || lv === 99 ? ["国語", "算数", "社会", "理科", "音楽", "図工", "体育", "道徳", "外国語"] : ["国語", "算数", "生活", "音楽", "図工", "体育", "道徳"];
             subjects.forEach(s => {
                 const btn = document.createElement('button');
                 btn.className = "p-5 rounded-3xl font-black text-2xl shadow-sm active:scale-95 transition-all text-white " + 
                     { "国語":"bg-pink-400", "算数":"bg-blue-400", "社会":"bg-orange-800", "理科":"bg-green-700", "生活":"bg-green-400", "音楽":"bg-yellow-400", "図工":"bg-purple-400", "体育":"bg-red-400", "道徳":"bg-orange-400", "外国語":"bg-indigo-400" }[s];
-                btn.innerText = smartConvert(s, lv);
-                btn.onclick = () => onSubjectClick(s);
-                grid.appendChild(btn);
+                btn.innerText = smartConvert(s, lv); btn.onclick = () => onSubjectClick(s); grid.appendChild(btn);
             });
-            updateUI();
-            document.getElementById('subjectModal').classList.remove('hidden');
+            updateUI(); document.getElementById('subjectModal').classList.remove('hidden');
         }
 
         function onSubjectClick(subj) {
-            sfx.click();
-            if (isHistoryView) { showHistory(subj); }
-            else {
-                window.selectedSubj = subj;
-                const lv = getGradeLevel();
-                const suffix = (lv <= 2) ? "に ほぞん する？" : "に 保存する？";
+            sfx.click(); if (isHistoryView) { showHistory(subj); }
+            else { window.selectedSubj = subj; const lv = getGradeLevel(); const suffix = (lv <= 2) ? "に ほぞん する？" : "に 保存する？";
                 document.getElementById('confirmText').innerText = smartConvert(subj, lv) + suffix;
-                document.getElementById('subjectModal').classList.add('hidden');
-                document.getElementById('confirmModal').classList.remove('hidden');
+                document.getElementById('subjectModal').classList.add('hidden'); document.getElementById('confirmModal').classList.remove('hidden');
             }
         }
 
@@ -256,14 +270,12 @@
         document.getElementById('historyBtn').onclick = () => openSubjectModal(true);
 
         document.getElementById('execSave').onclick = () => {
-            sfx.save(); 
-            closeModal('confirmModal');
-            canvas.classList.add('suck-in');
+            sfx.save(); closeModal('confirmModal'); canvas.classList.add('suck-in');
             setTimeout(() => {
                 const history = JSON.parse(localStorage.getItem('furiHistory') || '[]');
-                history.unshift({ date: new Date().toLocaleString('ja-JP'), subject: window.selectedSubj, text: ricDisplay.innerText });
+                history.unshift({ date: new Date().toLocaleString('ja-JP'), subject: window.selectedSubj, text: ricDisplay.innerText, images: attachedImages });
                 localStorage.setItem('furiHistory', JSON.stringify(history));
-                fullConversation = []; currentKanjiText = ""; ricDisplay.innerText = ""; renderDisplay();
+                fullConversation = []; currentKanjiText = ""; ricDisplay.innerText = ""; attachedImages = []; renderPhotoPreview(); renderDisplay();
                 canvas.classList.remove('suck-in');
             }, 850);
         };
@@ -274,13 +286,20 @@
             const filtered = data.filter(item => item.subject === subject);
             document.getElementById('historyDetailTitle').innerText = `🎁 ${smartConvert(subject, getGradeLevel())}の きろく`;
             list.innerHTML = filtered.length ? "" : "<p class='text-center mt-20 text-gray-400 font-bold'>きろくが ありません</p>";
-            filtered.forEach(item => {
+            filtered.forEach((item, idx) => {
                 const d = document.createElement('div');
-                d.className = "bg-white p-5 rounded-3xl shadow-sm border-l-8 border-orange-400 mb-4";
-                d.innerHTML = `<div class='text-[10px] text-gray-300'>${item.date}</div><p class='text-2xl font-black text-gray-700'>${item.text.replace(/\n/g, '<br>')}</p>`;
+                d.className = "bg-white p-5 rounded-3xl shadow-sm border-l-8 border-orange-400 mb-4 active:bg-orange-50 transition-all";
+                d.innerHTML = `<div class='text-[10px] text-gray-300'>${item.date}</div><p class='text-2xl font-black text-gray-700'>${item.text.replace(/\n/g, '<br>')}</p>${(item.images && item.images.length) ? '<div class="mt-2 text-sky-400 font-bold text-xs">📷 しゃしんをみる</div>' : ''}`;
+                d.onclick = () => { if(item.images && item.images.length) showPhotoViewer(item.images); };
                 list.appendChild(d);
             });
             document.getElementById('historyDetailModal').classList.remove('hidden');
+        }
+
+        function showPhotoViewer(imgs) {
+            const list = document.getElementById('photoList');
+            list.innerHTML = imgs.map(src => `<img src="${src}" class="max-w-full max-h-[70vh] rounded-2xl shadow-xl">`).join('');
+            document.getElementById('photoViewerModal').classList.remove('hidden');
         }
 
         function closeModal(id) { sfx.click(); document.getElementById(id).classList.add('hidden'); }
@@ -294,28 +313,11 @@
             document.getElementById('listenBtn').onclick = () => {
                 sfx.click(); window.speechSynthesis.cancel();
                 const uttr = new SpeechSynthesisUtterance(currentKanjiText || ricDisplay.innerText || "なにか かいてね");
-                uttr.lang = 'ja-JP'; 
-                uttr.rate = 0.85; // ★ さらにゆっくりに調整
-                window.speechSynthesis.speak(uttr);
+                uttr.lang = 'ja-JP'; uttr.rate = 0.85; window.speechSynthesis.speak(uttr);
             };
-
-            document.getElementById('clearBtn').onclick = () => { sfx.click(); if(confirm("全部消す？")) { fullConversation = []; currentKanjiText = ""; ricDisplay.innerText = ""; renderDisplay(); } };
-            
-            // ★ カーソル位置で1字消す修正
-            document.getElementById('backspaceBtn').onclick = () => {
-                sfx.click();
-                ricDisplay.focus();
-                document.execCommand('delete', false, null);
-                // 漢字変換用の内部テキストも同期（簡易的）
-                currentKanjiText = ricDisplay.innerText;
-            };
-
-            document.getElementById('newLineBtn').onclick = () => {
-                sfx.click();
-                ricDisplay.focus();
-                document.execCommand('insertLineBreak');
-                currentKanjiText = ricDisplay.innerText;
-            };
+            document.getElementById('clearBtn').onclick = () => { sfx.click(); if(confirm("全部消す？")) { fullConversation = []; currentKanjiText = ""; ricDisplay.innerText = ""; attachedImages = []; renderPhotoPreview(); renderDisplay(); } };
+            document.getElementById('backspaceBtn').onclick = () => { sfx.click(); ricDisplay.focus(); document.execCommand('delete', false, null); currentKanjiText = ricDisplay.innerText; };
+            document.getElementById('newLineBtn').onclick = () => { sfx.click(); ricDisplay.focus(); document.execCommand('insertLineBreak'); currentKanjiText = ricDisplay.innerText; };
             
             recognition.onstart = () => { isRunning = true; document.getElementById('micBtn').classList.add('bg-red-500', 'pulse-red'); updateUI(); };
             recognition.onresult = (event) => {
@@ -333,10 +335,7 @@
             try {
                 const res = await fetch(`${GAS_URL}?text=${encodeURIComponent(text)}`);
                 const data = await res.json();
-                if (data.words_all) {
-                    fullConversation = [...fullConversation, ...data.words_all];
-                    renderDisplay();
-                }
+                if (data.words_all) { fullConversation = [...fullConversation, ...data.words_all]; renderDisplay(); }
             } catch (e) {}
         }
         renderDisplay();
