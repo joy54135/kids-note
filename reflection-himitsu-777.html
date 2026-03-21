@@ -67,27 +67,26 @@
                 btnLabel.innerText = "きいてるよ";
             };
 
-            recognition.onend = () => {
-                micBtn.classList.remove('bg-red-500', 'border-red-200', 'pulse-red');
-                micBtn.classList.add('bg-sky-400', 'border-sky-100');
-                btnLabel.innerText = "おしてね";
-            };
-
             recognition.onresult = async (event) => {
                 const transcript = event.results[0][0].transcript;
-                msg.innerText = "かんがえちゅう...";
+                msg.innerText = "「" + transcript + "」を かんがえちゅう..."; // 何を認識したか表示
                 
                 try {
-                    const res = await fetch(GAS_URL, {
-                        method: 'POST',
-                        body: JSON.stringify({ text: transcript })
-                    });
+                    // GET方式に変更：URLの末尾にテキストをくっつける
+                    const targetUrl = `${GAS_URL}?text=${encodeURIComponent(transcript)}`;
+                    const res = await fetch(targetUrl);
                     const data = await res.json();
                     
-                    renderWords(data.words);
-                    sounds.success.play();
+                    if (data.words) {
+                        renderWords(data.words);
+                        sounds.success.play();
+                        msg.innerText = ""; 
+                    } else {
+                        msg.innerText = "うまく よめなかったよ";
+                    }
                 } catch (e) {
-                    msg.innerText = "エラーになっちゃった";
+                    console.error(e);
+                    msg.innerText = "つうしん エラー";
                 }
             };
         }
