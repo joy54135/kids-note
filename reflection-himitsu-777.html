@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ひらがな スケッチブック Pro v28</title>
+    <title>ひらがな スケッチブック Pro v29</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .sketchbook { background-image: radial-gradient(#e5e7eb 1px, transparent 1px); background-size: 20px 20px; }
@@ -22,13 +22,13 @@
             placeholder="おしてね を おして はなしてね"
             spellcheck="false"></textarea>
         <div id="preview" class="text-2xl font-bold text-sky-300 italic pointer-events-none mt-2"></div>
-        <div id="voiceStatus" class="text-[10px] text-gray-400 font-mono mt-1 text-right">Voice: 準備中...</div>
+        <div id="voiceStatus" class="text-[10px] text-gray-400 font-mono mt-1 text-right leading-tight">Voices: 検索中...</div>
     </div>
 
     <div class="w-full max-w-4xl grid grid-cols-5 gap-2 mb-6">
         <button id="clearBtn" class="bg-white border-2 border-gray-200 rounded-2xl flex flex-col items-center justify-center py-2 active:bg-gray-100 transition-all">
             <span class="text-3xl">🧹</span>
-            <span class="text-[10px] font-bold text-gray-400 text-center leading-none">ぜんぶ<br>消す</span>
+            <span class="text-[10px] font-bold text-gray-400 text-center leading-none font-black">ぜんぶ<br>消す</span>
         </button>
         <button id="backspaceBtn" class="bg-white border-2 border-orange-200 rounded-2xl flex flex-col items-center justify-center py-2 active:bg-orange-50 transition-all">
             <span class="text-3xl">⌫</span>
@@ -63,24 +63,43 @@
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         let isRunning = false;
 
-        // --- 自然な読み上げのためのボイス選択ロジック ---
+        // --- 自然な読み上げのためのボイス選択ロジック（強化版） ---
         let voices = [];
         const loadVoices = () => {
             voices = window.speechSynthesis.getVoices();
+            const jpVoices = voices.filter(v => v.lang.includes('ja'));
             const best = getBestVoice();
-            if(best) voiceStatus.innerText = "Voice: " + best.name;
+            
+            // 診断表示：見つかった音声の数を表示
+            if(best) {
+                voiceStatus.innerText = `Found:${jpVoices.length} / Now: ${best.name}`;
+            }
         };
+
         window.speechSynthesis.onvoiceschanged = loadVoices;
         loadVoices();
 
         function getBestVoice() {
-            const jpVoices = voices.filter(v => v.lang === 'ja-JP' || v.lang === 'ja_JP');
-            // 優先順位: Siri(音声2) > Siri > 拡張(Enhanced) > Google > 最初の日本語音声
-            return jpVoices.find(v => v.name.includes('Siri') && v.name.includes('2')) ||
-                   jpVoices.find(v => v.name.includes('Siri')) ||
-                   jpVoices.find(v => v.name.includes('Enhanced')) ||
-                   jpVoices.find(v => v.name.includes('Google')) ||
-                   jpVoices[0];
+            const jpVoices = voices.filter(v => v.lang.includes('ja'));
+            
+            // iPad(Safari)向けの優先順位をさらに厳格に
+            // 1. Siri (高品質)
+            const siriPremium = jpVoices.find(v => v.name.includes('Siri') && (v.name.includes('Premium') || v.name.includes('Quality')));
+            if (siriPremium) return siriPremium;
+
+            // 2. Siri
+            const siri = jpVoices.find(v => v.name.includes('Siri'));
+            if (siri) return siri;
+
+            // 3. Kyoko または O-ren の「Premium/Enhanced（拡張）」
+            const enhanced = jpVoices.find(v => (v.name.includes('Premium') || v.name.includes('Enhanced')));
+            if (enhanced) return enhanced;
+
+            // 4. Google
+            const google = jpVoices.find(v => v.name.includes('Google'));
+            if (google) return google;
+
+            return jpVoices[0];
         }
 
         if (!SpeechRecognition) {
@@ -99,52 +118,36 @@
                 window.speechSynthesis.cancel();
                 const uttr = new SpeechSynthesisUtterance(output.value);
                 const voice = getBestVoice();
-                if (voice) {
-                    uttr.voice = voice;
-                    voiceStatus.innerText = "Voice: " + voice.name; // 再生時にも更新表示
-                }
+                if (voice) uttr.voice = voice;
+                
                 uttr.lang = 'ja-JP';
-                uttr.rate = 0.92; // 5歳児向けにほんの少しだけゆっくり
+                uttr.rate = 0.92; 
                 uttr.pitch = 1.0;
                 window.speechSynthesis.speak(uttr);
             };
 
             clearBtn.onclick = () => { if(output.value && confirm("ぜんぶ けして いい？")) output.value = ""; };
-
             backspaceBtn.onclick = () => {
                 const start = output.selectionStart;
-                const end = output.selectionEnd;
                 const val = output.value;
-                if (start === end) {
-                    if (start > 0) {
-                        output.value = val.substring(0, start - 1) + val.substring(end);
-                        output.selectionStart = output.selectionEnd = start - 1;
-                    }
-                } else {
-                    output.value = val.substring(0, start) + val.substring(end);
-                    output.selectionStart = output.selectionEnd = start;
-                }
+                output.value = val.substring(0, start - 1) + val.substring(output.selectionEnd);
+                output.selectionStart = output.selectionEnd = start - 1;
                 output.focus();
             };
-
             newLineBtn.onclick = () => {
                 const start = output.selectionStart;
-                const val = output.value;
-                output.value = val.substring(0, start) + "\n" + val.substring(start);
+                output.value = output.value.substring(0, start) + "\n" + output.value.substring(start);
                 output.selectionStart = output.selectionEnd = start + 1;
                 output.focus();
             };
 
             recognition.onstart = () => {
-                isRunning = true;
-                micBtn.classList.add('bg-red-500', 'pulse-red');
-                btnLabel.innerText = "おわる";
-                preview.innerText = "きいてるよ...";
+                isRunning = true; micBtn.classList.add('bg-red-500', 'pulse-red');
+                btnLabel.innerText = "おわる"; preview.innerText = "きいてるよ...";
             };
 
             recognition.onresult = (event) => {
-                let interimTranscript = '';
-                let finalTranscript = '';
+                let interimTranscript = ''; let finalTranscript = '';
                 for (let i = event.resultIndex; i < event.results.length; i++) {
                     const transcript = event.results[i][0].transcript;
                     if (event.results[i].isFinal) finalTranscript += transcript;
@@ -156,12 +159,9 @@
                     sendToGas(finalTranscript);
                 }
             };
-
             recognition.onend = () => {
-                isRunning = false;
-                micBtn.classList.remove('bg-red-500', 'pulse-red');
-                btnLabel.innerText = "おしてね";
-                preview.innerText = "";
+                isRunning = false; micBtn.classList.remove('bg-red-500', 'pulse-red');
+                btnLabel.innerText = "おしてね"; preview.innerText = "";
             };
         }
 
@@ -172,16 +172,12 @@
                 if (data.words) {
                     const newText = data.words.join('');
                     const start = output.selectionStart;
-                    const end = output.selectionEnd;
-                    const val = output.value;
-                    output.value = val.substring(0, start) + newText + val.substring(end);
+                    output.value = output.value.substring(0, start) + newText + output.value.substring(start);
                     output.selectionStart = output.selectionEnd = start + newText.length;
                     output.focus();
                     preview.innerText = "";
                 }
-            } catch (e) {
-                preview.innerText = "エラー：つうしんを かくにんしてね";
-            }
+            } catch (e) { preview.innerText = "エラー：つうしんを かくにんしてね"; }
         }
     </script>
 </body>
