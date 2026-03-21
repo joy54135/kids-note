@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>学びの足跡 v8.3</title>
+    <title>学びの足跡 v8.4</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { height: 100dvh; background-color: #fffbeb; margin: 0; display: flex; flex-direction: column; overflow: hidden; font-family: sans-serif; }
@@ -15,6 +15,7 @@
         #authOverlay { position: fixed; inset: 0; background-color: #fb923c; z-index: 1000000; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 2rem; }
         #authOverlay.active { display: flex; }
         .auth-card { background: white; border-radius: 3rem; padding: 2.5rem; width: 100%; max-width: 26rem; text-align: center; }
+        /* 編集画面：最前面を維持 */
         #editorOverlay { position: fixed; inset: 0; background-color: #fffbeb; z-index: 999999; display: none; flex-direction: column; padding: 1.2rem; }
         #editorOverlay.active { display: flex; }
         .modal-bg { position: fixed; inset: 0; display: none; flex-direction: column; padding: 1.2rem; z-index: 888888; background-color: rgba(0,0,0,0.8); backdrop-filter: blur(10px); justify-content: center; align-items: center; }
@@ -25,7 +26,6 @@
         input { border: 4px solid #fed7aa; border-radius: 1.5rem; padding: 1rem; width: 100%; font-size: 1.5rem; font-weight: 900; text-align: center; outline: none; margin-bottom: 1rem; }
         .badge { position: absolute; bottom: 0.5rem; right: 0.5rem; font-size: 2.8rem; pointer-events: none; animation: pop-bounce 0.6s forwards; }
         @keyframes pop-bounce { 0% { transform: scale(0); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
-        /* 編集エリア：カーソル操作を安定させる */
         #richDisplay { flex: 1; background: white; border: 4px solid #ffedd5; border-radius: 2.5rem; padding: 2rem; font-size: 2.8rem; font-weight: 900; outline: none; overflow-y: auto; -webkit-user-select: text; }
         .btn-active-state:active { background-color: #fde047 !important; transform: scale(0.95); }
         .photo-grid-mini { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; height: 100%; }
@@ -51,7 +51,6 @@
 
         window.onload = function() { checkAuth(); refreshMainView(); };
 
-        // --- 認証系 ---
         function checkAuth() {
             var auth = localStorage.getItem(AUTH_KEY);
             if (!auth) { document.getElementById('authOverlay').classList.add('active'); document.getElementById('registrationForm').style.display = "block"; document.getElementById('loginForm').style.display = "none";
@@ -62,7 +61,7 @@
         function executeReset() { if (document.getElementById('teacherCodeInput').value === TEACHER_CODE) { if (confirm("やりなおしますか？")) { localStorage.removeItem(AUTH_KEY); location.reload(); } } else alert("ばんごうが ちがいます"); }
         function updateUserDisplay() { if(appState.user) document.getElementById('displayUser').innerText = appState.user.class + " " + appState.user.no + "番"; }
 
-        // --- 音声入力 & カーソル操作（v8.3 核心部） ---
+        // --- 音声入力 & カーソル操作 ---
         var SpeechRecognition = window.webkitSpeechRecognition || window.SpeechRecognition;
         var rec = SpeechRecognition ? new SpeechRecognition() : null;
         var isRec = false;
@@ -71,19 +70,18 @@
         if(rec) {
             rec.lang = 'ja-JP'; rec.interimResults = true;
             rec.onstart = function() { isRec = true; lastInterimText = ""; document.getElementById('micBtn').style.background = "#ef4444"; document.getElementById('micLabel').innerText = "やめる"; };
-            rec.onend = function() { isRec = false; document.getElementById('micBtn').style.background = "#38bdf8"; document.getElementById('micLabel').innerText = "おしてね"; if (lastInterimText.trim() !== "") { sendToGas(lastInterimText); lastInterimText = ""; } };
+            // ★テキストを「話す」に変更
+            rec.onend = function() { isRec = false; document.getElementById('micBtn').style.background = "#38bdf8"; document.getElementById('micLabel').innerText = "話す"; if (lastInterimText.trim() !== "") { sendToGas(lastInterimText); lastInterimText = ""; } };
             rec.onresult = function(e) { var interim = ""; for(var i=e.resultIndex; i<e.results.length; i++){ if(e.results[i].isFinal) sendToGas(e.results[i][0].transcript); else interim += e.results[i][0].transcript; } lastInterimText = interim; };
         }
 
         function handleMicAction() {
             if (isBusy) return; isBusy = true; setTimeout(() => isBusy = false, 600);
             if(!rec) return alert("マイクが つかえません");
-            // カーソル位置を保持するためにエディタにフォーカス
             document.getElementById('richDisplay').focus();
             try { if (isRec) rec.stop(); else rec.start(); } catch(e) { rec.stop(); }
         }
 
-        // カーソル位置にテキストを挿入する
         function insertTextAtCursor(text) {
             var sel = window.getSelection();
             if (sel.getRangeAt && sel.rangeCount) {
@@ -91,7 +89,6 @@
                 range.deleteContents();
                 var textNode = document.createTextNode(text);
                 range.insertNode(textNode);
-                // カーソルを挿入した文字の直後に移動
                 range.setStartAfter(textNode);
                 range.setEndAfter(textNode);
                 sel.removeAllRanges();
@@ -108,7 +105,6 @@
                 var res = await fetch('https://script.google.com/macros/s/AKfycbxxE14tNshFIqZHwzhyGQtRDeSazD9aPex9Tm0gIGJjmUvd8jAiFN-bkQyNIt_D9cV_/exec?text=' + encodeURIComponent(text));
                 var d = await res.json();
                 if(d.words_all) {
-                    // ふりがな表示がカーソル位置を壊すため、一旦プレーンテキストとして挿入
                     var plainText = d.words_all.map(w => w.surface).join('');
                     insertTextAtCursor(plainText);
                 }
@@ -122,7 +118,6 @@
             document.getElementById('headerArea').style.display = "none";
             document.getElementById('editorOverlay').classList.add('active');
             document.getElementById('editorTitle').innerText = {t1:'①めあて', t2:'②できたこと', t3:'③むずかしかった', t4:'④つぎのこと'}[id];
-            // エディタには以前入力した文字をセット
             var currentText = appState.tiles[id].map(w => w.surface).join('');
             document.getElementById('richDisplay').innerText = currentText;
             setTimeout(() => document.getElementById('richDisplay').focus(), 100);
@@ -131,9 +126,7 @@
         function closeEditor(save) {
             if(save) {
                 var newText = document.getElementById('richDisplay').innerText;
-                // 保存時に一括で単語オブジェクト化（ふりがな対応のため）
                 appState.tiles[appState.activeId] = [{surface: newText, furigana: ""}];
-                // 宝石バッジ判定
                 if(newText.length > 0 && !appState.badges[appState.activeId]) appState.badges[appState.activeId] = EMOJI_LIST[Math.floor(Math.random() * EMOJI_LIST.length)];
                 else if(!newText.length) appState.badges[appState.activeId] = "";
                 refreshMainView();
@@ -143,14 +136,7 @@
             document.getElementById('headerArea').style.display = "flex";
         }
 
-        // 1字だけ消す（カーソル位置対応）
-        function deleteOneChar(event) {
-            event.preventDefault(); // ボタンへのフォーカス移動を防ぐ
-            document.getElementById('richDisplay').focus();
-            document.execCommand('delete', false, null); // ブラウザ標準の1字消去を実行
-        }
-
-        // 全部消す
+        function deleteOneChar(event) { event.preventDefault(); document.getElementById('richDisplay').focus(); document.execCommand('delete', false, null); }
         function clearInEditor() { if(confirm("ぜんぶ けしますか？")){ document.getElementById('richDisplay').innerText = ""; } }
 
         // --- その他基本機能 ---
@@ -174,7 +160,7 @@
         function closePhoto() { document.getElementById('photoViewerOverlay').classList.remove('active'); }
         async function handlePhotos(input) { var fs = Array.from(input.files); if(appState.tiles.photos.length + fs.length > 2) { alert("2枚まで"); input.value = ""; return; } for(var i=0; i<fs.length; i++){ await new Promise(r => { var rd = new FileReader(); rd.onload = e => { var img = new Image(); img.onload = () => { var cv = document.createElement('canvas'); var m = 800; var w = img.width, h = img.height; if(w > h) { if(w > m){ h *= m/w; w = m; } } else { if(h > m){ w *= m/h; h = m; } } cv.width = w; cv.height = h; cv.getContext('2d').drawImage(img, 0, 0, w, h); appState.tiles.photos.push(cv.toDataURL('image/jpeg', 0.6)); refreshMainView(); r(); }; img.src = e.target.result; }; rd.readAsDataURL(fs[i]); }); } input.value = ""; }
         function renderHistory() { var h = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); var list = document.getElementById('historyList'); document.getElementById('historyTitle').innerText = "🎁 どの きょうか？"; list.innerHTML = '<div class="grid grid-cols-2 gap-4">' + ALL_SUBJECTS.map(s => h.some(x=>x.subject===s) ? `<button onclick="viewHistorySubject('${s}')" class="bg-orange-400 text-white p-6 rounded-2xl font-black text-2xl shadow-md border-4 border-white">${s}</button>` : `<button class="bg-gray-100 text-gray-300 p-6 rounded-2xl font-black text-2xl border-4 border-dashed border-gray-200 opacity-60">${s}</button>`).join('') + '</div>'; }
-        function viewHistorySubject(s) { var h = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]').filter(x=>x.subject===s); var list = document.getElementById('historyList'); document.getElementById('historyTitle').innerText = "🎁 " + s + "の きろく"; var html = '<button onclick="renderHistory()" class="mb-6 text-orange-400 font-black text-xl">⬅️ もどる</button>'; h.forEach(x => { var b = x.badges || {}; html += `<div class="bg-white border-4 border-orange-100 p-6 rounded-[2.5rem] mb-6 shadow-sm"><div class="flex justify-between items-center mb-3 text-xs text-orange-300 font-black">${x.date}<button onclick="loadToApp(${x.id})" class="bg-sky-400 text-white px-6 py-2 rounded-full text-sm">✎なおす</button></div><div class="space-y-1 text-sm font-black text-gray-700">${['t1','t2','t3','t4'].map(function(k,i){return '<div class="flex justify-between border-b border-orange-50"><span>'+(i+1)+' '+(x.fullData[k]||[]).map(function(w){return w.surface;}).join('')+'</span><span class="text-xl">'+(b[k]||"")+'</span></div>';}).join('')}</div><div class="flex gap-2 mt-4">${(x.fullData.photos||[]).map(function(p){return '<img src="'+p+'" class="w-16 h-16 object-cover rounded-xl" onclick="viewPhoto(\''+p+'\')">';}).join('')}</div></div>`; }); list.innerHTML = html; }
+        function viewHistorySubject(s) { var h = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]').filter(x=>x.subject===s); var list = document.getElementById('historyList'); document.getElementById('historyTitle').innerText = "🎁 " + s + "の きろく"; var html = '<button onclick="renderHistory()" class="mb-6 text-orange-400 font-black text-xl">⬅️ もどる</button>'; history.forEach(x => { var b = x.badges || {}; html += `<div class="bg-white border-4 border-orange-100 p-6 rounded-[2.5rem] mb-6 shadow-sm"><div class="flex justify-between items-center mb-3 text-xs text-orange-300 font-black">${x.date}<button onclick="loadToApp(${x.id})" class="bg-sky-400 text-white px-6 py-2 rounded-full text-sm">✎なおす</button></div><div class="space-y-1 text-sm font-black text-gray-700">${['t1','t2','t3','t4'].map(function(k,i){return '<div class="flex justify-between border-b border-orange-50"><span>'+(i+1)+' '+(x.fullData[k]||[]).map(function(w){return w.surface;}).join('')+'</span><span class="text-xl">'+(b[k]||"")+'</span></div>';}).join('')}</div><div class="flex gap-2 mt-4">${(x.fullData.photos||[]).map(function(p){return '<img src="'+p+'" class="w-16 h-16 object-cover rounded-xl" onclick="viewPhoto(\''+p+'\')">';}).join('')}</div></div>`; }); list.innerHTML = html; }
         function loadToApp(id) { var hStr = localStorage.getItem(STORAGE_KEY); if(!hStr) return; var history = JSON.parse(hStr); var h = history.find(x=>x.id===id); if(h) { appState.tiles = JSON.parse(JSON.stringify(h.fullData)); appState.badges = JSON.parse(JSON.stringify(h.badges || {})); appState.editingId = id; appState.isDeleteMode = false; refreshMainView(); closeModal('historyModal'); document.getElementById('saveBtnLabel').innerText = "なおして ほぞんする 💎"; document.getElementById('saveBtnContainer').style.backgroundColor = "#38bdf8"; } }
     </script>
 </head>
@@ -230,19 +216,20 @@
     </div>
 
     <div id="editorOverlay">
-        <div class="flex justify-between items-center mb-4 px-2">
-            <button onclick="closeEditor(false)" class="text-gray-400 font-black text-2xl p-2">✖ やめる</button>
-            <div id="editorTitle" class="text-orange-400 font-black text-2xl"></div>
-            <button onclick="closeEditor(true)" class="bg-orange-400 text-white px-10 py-3 rounded-full font-black text-xl">決定</button>
+        <div class="flex justify-between items-center mb-4 px-2 relative">
+            <button onclick="closeEditor(false)" class="text-gray-400 font-black text-2xl p-2 force-touch">✖ やめる</button>
+            <div id="editorTitle" class="absolute left-1/2 -translate-x-1/2 text-orange-400 font-black text-2xl"></div>
+            <div class="w-20"></div> 
         </div>
         <div class="flex-1 relative flex flex-col min-h-0">
             <div id="loadingStatus" style="display:none;" class="absolute inset-0 bg-white/80 z-[6000] flex flex-col items-center justify-center rounded-[2.5rem]"><div class="text-3xl font-black text-orange-400 animate-bounce">ちょっとまってね🪄</div></div>
             <div id="richDisplay" contenteditable="true" spellcheck="false"></div>
         </div>
-        <div class="grid grid-cols-3 gap-4 mt-6">
-            <button id="micBtn" onclick="handleMicAction()" class="bg-sky-400 rounded-[2rem] py-8 text-white font-black text-2xl btn-active-state"><span id="micLabel">おしてね</span></button>
-            <button onmousedown="deleteOneChar(event)" class="bg-white border-4 border-orange-100 rounded-[2rem] py-8 text-orange-400 font-black text-2xl btn-active-state">1字けす</button>
-            <button onclick="clearInEditor()" class="bg-red-500 rounded-[2rem] py-8 text-white font-black text-2xl btn-active-state">全部けす</button>
+        <div class="grid grid-cols-4 gap-3 mt-6 editor-bottom-nav">
+            <button onclick="clearInEditor()" class="bg-red-500 rounded-[2rem] py-6 text-white font-black text-2xl btn-active-state force-touch">全部消す</button>
+            <button onmousedown="deleteOneChar(event)" class="bg-white border-4 border-orange-100 rounded-[2rem] py-6 text-orange-400 font-black text-2xl btn-active-state force-touch">1字消す</button>
+            <button id="micBtn" onclick="handleMicAction()" class="bg-sky-400 rounded-[2rem] py-6 text-white font-black text-2xl btn-active-state force-touch"><span id="micLabel">話す</span></button>
+            <button onclick="event.stopPropagation(); closeEditor(true);" class="bg-orange-400 rounded-[2rem] py-6 text-white font-black text-2xl btn-active-state force-touch">決定</button>
         </div>
     </div>
 
