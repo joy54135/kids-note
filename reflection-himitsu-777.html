@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>ふりかえり たからばこ v52</title>
+    <title>ふりかえり たからばこ v51</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
@@ -50,7 +50,7 @@
         <div class="grid grid-cols-3 gap-4">
             <button id="micBtn" class="relative bg-sky-400 border-4 border-sky-100 rounded-2xl py-5 shadow-lg active:scale-95 flex flex-col items-center justify-center text-white">
                 <div class="step-num text-sky-400">1</div>
-                <span id="label-mic" class="text-3xl font-black italic text-center leading-none">おしてね</span>
+                <span id="label-mic" class="text-3xl font-black italic text-center">おしてね</span>
                 <span id="label-mic-sub" class="text-xs font-bold opacity-90 uppercase mt-1">お話しする</span>
             </button>
             <button id="listenBtn" class="relative bg-green-400 border-4 border-green-100 rounded-2xl py-5 shadow-lg active:scale-95 flex flex-col items-center justify-center text-white leading-none">
@@ -117,6 +117,7 @@
     <script>
         const GAS_URL = 'https://script.google.com/macros/s/AKfycbxxE14tNshFIqZHwzhyGQtRDeSazD9aPex9Tm0gIGJjmUvd8jAiFN-bkQyNIt_D9cV_/exec';
         
+        // 音響
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
         function playSfx(freq, type, duration, startTime = 0) {
             const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
@@ -129,16 +130,16 @@
         const sfx = {
             click: () => playSfx(600, 'sine', 0.1),
             pop: () => { playSfx(400, 'sine', 0.1); setTimeout(() => playSfx(800, 'sine', 0.1), 50); },
-            save: () => { [1000, 1200, 1500, 1800, 2100, 2400, 2700, 3000, 3300, 3600].forEach((f, i) => playSfx(f, 'sine', 1.0, i * 0.08)); }
+            save: () => { [1000, 1200, 1500, 1800, 2100, 2400, 2700, 3000].forEach((f, i) => playSfx(f, 'sine', 0.8, i * 0.1)); }
         };
 
         const KANJI_LISTS = {
             1: "一右雨円王音下火花貝学気九休玉金空月犬見五口校左三山子四糸字耳七車手十出女小上森人水正生青夕石赤千川先早草足村大男竹中虫町天田土二日入年白八百文木本名目立力林六",
-            2: "引羽雲園遠何科夏家歌画回会海絵外角楽活間丸岩顔汽記帰弓牛魚京強教近兄形計元言原戸古午後語工公広交光考行高黄合谷国黒今才細作算止市矢姉思紙寺自時室社弱首秋週春書少場色食心新親図数西声星晴切雪船線前組走多太体台地池知茶昼長鳥朝直通弟店点電刀冬當東答頭同道読内南肉馬売買麦半番父風分聞米歩母方北毎妹万明鳴毛門夜野友用曜来里理話",
+            2: "引羽雲園遠何科夏家歌画回会海絵外角楽活間丸岩顔汽記帰弓牛魚京強教近兄形計元言原戸古午後語工公広交光考行高黄合谷国黒今才細作算止市矢姉思紙寺自時室社弱首秋週春書少場色食心新親図数西声星晴切雪船線前組走多太体台地池知茶昼長鳥朝直通弟店点電刀冬当東答頭同道読内南肉馬売買麦半番父風分聞米歩母方北毎妹万明鳴毛門夜野友用曜来里理話",
             3: "悪安暗医委意育員院飲運泳駅央横屋温化荷界開階寒感漢館岸起期客究急級宮球去橋業曲局銀区苦具君係軽血決研県庫湖向幸港号根祭皿仕死使始指歯詩次事持式実写者主守取酒受州拾終習集住重宿所暑助昭消商章勝乗植申身神真深進世整昔全相送想息速族他打対待代第題炭短談着注柱丁帳調追定庭笛鉄転都度投豆島湯登等動童農波配倍箱畑発反坂板皮悲美鼻筆氷表秒病品負部服福物平返勉放味命面問役薬由油有遊予羊洋葉陽様落流旅両緑礼列練路和",
             4: "愛案以衣位茨印英栄媛塩岡億加果貨課芽賀改械害街各覚潟完官管関観願岐希旗器機議求泣給挙漁共協鏡競極熊訓軍郡群径景芸欠結建健験固功好香候康佐差菜最埼材崎昨札刷察参産散残氏司試児治滋辞鹿失借種周祝順初松笑唱焼照城縄臣信井成省清静席積折節説浅戦選然争倉巣束側続卒孫帯隊達単置仲沖兆低底的な典伝徒努灯働特徳栃木奈梨熱念敗梅博阪飯飛必票標不夫付府阜富副兵別辺変便包法望牧末満未民無約勇要養浴利陸良料量輪類令冷例連老労録",
-            5: "圧囲移因永営衛易益液演応往桜可仮価河過快解格確額刊幹慣眼紀基寄規喜技義逆久旧救居許境均禁句型経潔件険検限現減故個護効厚耕航鉱構興講告混査再災妻採際在財罪殺雑酸賛士支史志枝師資飼示似識質舎謝授修述術準序招証象賞条状常表情織職制性政勢精製税責績接設絶祖素総造像増則測属率損貸態団断築貯張停提程適統堂銅導得毒独任燃能破犯判版比肥非費備評貧布婦武復複仏粉編弁保墓報豊防貿暴脈務夢迷綿遊余容略留領歴",
-            6: "胃異遺域宇映延沿順我灰拡革閣割株干巻看簡危机揮貴疑習供胸郷勤筋系敬警劇激穴券絹権憲源厳己呼誤后孝皇紅降鋼刻穀骨困砂座済裁策冊蚕至私姿視詞誌磁射捨尺若樹収宗就衆従縦縮熟純処署諸除承将傷障蒸針仁垂推寸盛聖誠舌宣専泉洗染銭善奏窓創装層操蔵臓存尊退宅担探誕段暖値宙忠著庁頂腸潮賃痛敵展討党糖届難乳認納脳派拝背肺俳班晩否批秘俵腹奮並陛閉片補暮宝訪亡忘棒枚幕密盟模訳郵優預幼欲翌乱卵覧裏律臨朗論"
+            5: "圧囲移因永営衛易益液演応往桜可仮価河過快解格確額刊幹慣眼紀基寄規喜技義逆久旧救居許境均禁句型経潔件険検限現減故個護効厚耕航鉱構興講告混査再災妻採際在財罪殺雑酸賛士支史志枝師資飼示似識質舎謝授修述術準序招証象賞条状常表情織職制性政勢精製税責績接設絶祖素総造像増則測属率損貸態団断築貯張停提程適統堂銅導得毒独任燃能破犯判版比肥非費備評貧布婦武復複仏粉編弁保墓報豊防貿暴脈務夢迷綿輸余容略留領歴",
+            6: "胃異遺域宇映延沿順我灰拡革閣割株干巻看簡危机揮貴疑吸供胸郷勤筋系敬警劇激穴券絹権憲源厳己呼誤后孝皇紅降鋼刻穀骨困砂座済裁策冊蚕至私姿視詞誌磁射捨尺若樹収宗就衆従縦縮熟純処署諸除承将傷障蒸針仁垂推寸盛聖誠舌宣専泉洗染銭善奏窓創装層操蔵臓存尊退宅担探誕段暖値宙忠著庁頂腸潮賃痛敵展討党糖届難乳認納脳派拝背肺俳班晩否批秘俵腹奮並陛閉片補暮宝訪亡忘棒枚幕密盟模訳郵優預幼欲翌乱卵覧裏律臨朗論"
         };
 
         const HIRA_MAP = {
@@ -150,12 +151,15 @@
 
         const ricDisplay = document.getElementById('richDisplay');
         const kanjiDisplay = document.getElementById('kanjiDisplay');
+        const preview = document.getElementById('preview');
+        const canvas = document.getElementById('canvas');
         const gradeMode = document.getElementById('gradeMode');
         const photoPreview = document.getElementById('photoPreview');
         const fileInput = document.getElementById('fileInput');
 
-        let masterData = []; 
-        let isHistoryView = false; let isRunning = false; let attachedImages = []; let lastCursorPosition = 0;
+        let fullConversation = []; let currentKanjiText = ""; let isHistoryView = false; let isRunning = false;
+        let attachedImages = [];
+        let lastCursorPosition = 0;
 
         function isKanji(ch) { return (ch >= '\u4e00' && ch <= '\u9faf'); }
         function getGradeLevel() { return parseInt(gradeMode.value); }
@@ -174,7 +178,8 @@
         }
 
         function updateUI() {
-            const lv = getGradeLevel(); const set = (id, txt) => { const el = document.getElementById(id); if (el) el.innerText = smartConvert(txt, lv); };
+            const lv = getGradeLevel();
+            const set = (id, txt) => { const el = document.getElementById(id); if (el) el.innerText = smartConvert(txt, lv); };
             set("label-history", "記録"); set("label-title", "ふりかえり たからばこ");
             set("label-mic", isRunning ? "キャンセル" : "おしてね"); set("label-mic-sub", "お話しする");
             set("label-listen", "きいてみる"); set("label-save", "保存する");
@@ -184,40 +189,36 @@
         }
 
         function renderDisplay() {
-            const lv = getGradeLevel();
-            const allowed = getAllowedKanji(lv);
-            let upperHtml = "";
-            let lowerText = "";
-
-            masterData.forEach(item => {
-                if (item.s === "\n") { upperHtml += "<br>"; lowerText += "\n"; return; }
-                lowerText += item.s;
-                if (lv === 0) { upperHtml += item.f || item.s; }
-                else if (lv === 99) { upperHtml += item.s; }
+            const lv = getGradeLevel(); let html = ""; const allowed = getAllowedKanji(lv);
+            fullConversation.forEach(word => {
+                if (word.surface === "\n") { html += "<br>"; return; }
+                const furigana = word.furigana || word.surface;
+                if (lv === 0) html += furigana; else if (lv === 99) html += word.surface;
                 else {
-                    let canShow = true;
-                    for (let char of item.s) { if (isKanji(char) && !allowed.includes(char)) canShow = false; }
-                    upperHtml += canShow ? item.s : (item.f || item.s);
+                    let canShow = true; for (let char of word.surface) { if (isKanji(char) && !allowed.includes(char)) canShow = false; }
+                    html += canShow ? word.surface : furigana;
                 }
             });
-
-            ricDisplay.innerHTML = upperHtml;
-            kanjiDisplay.innerText = lowerText;
-            updateUI();
+            ricDisplay.innerHTML = html; kanjiDisplay.innerText = currentKanjiText; updateUI();
         }
 
         gradeMode.onchange = () => { sfx.click(); renderDisplay(); };
 
+        // --- 挿入位置の特定ロジック ---
         function getCursorCharacterOffset(element) {
-            let offset = 0; const selection = window.getSelection();
+            let offset = 0;
+            const selection = window.getSelection();
             if (selection.rangeCount > 0) {
-                const range = selection.getRangeAt(0); const preCaretRange = range.cloneRange();
-                preCaretRange.selectNodeContents(element); preCaretRange.setEnd(range.endContainer, range.endOffset);
-                offset = preCaretRange.toString().replace(/\n/g, "").length;
+                const range = selection.getRangeAt(0);
+                const preCaretRange = range.cloneRange();
+                preCaretRange.selectNodeContents(element);
+                preCaretRange.setEnd(range.endContainer, range.endOffset);
+                offset = preCaretRange.toString().length;
             }
             return offset;
         }
 
+        // --- 画像処理 ---
         document.getElementById('cameraBtn').onclick = () => { sfx.click(); fileInput.click(); };
         fileInput.onchange = (e) => {
             const files = Array.from(e.target.files);
@@ -242,13 +243,14 @@
             photoPreview.innerHTML = attachedImages.map((src, i) => `<img src="${src}" class="photo-thumb" onclick="sfx.click(); attachedImages.splice(${i},1); renderPhotoPreview();">`).join('');
         }
 
+        // --- モーダル制御 ---
         function openSubjectModal(forHistory) {
             sfx.pop(); isHistoryView = forHistory; const lv = getGradeLevel();
             const grid = document.getElementById('subjectGrid'); grid.innerHTML = "";
-            let subs = lv >= 3 || lv === 99 ? ["国語", "算数", "社会", "理科", "音楽", "ずこう", "体育", "道徳", "外国語"] : ["国語", "算数", "生活", "音楽", "ずこう", "体育", "道徳"];
+            let subs = lv >= 3 || lv === 99 ? ["国語", "算数", "社会", "理科", "音楽", "図工", "体育", "道徳", "外国語"] : ["国語", "算数", "生活", "音楽", "図工", "体育", "道徳"];
             subs.forEach(s => {
                 const btn = document.createElement('button');
-                btn.className = "p-5 rounded-3xl font-black text-2xl shadow-sm active:scale-95 transition-all text-white " + { "国語":"bg-pink-400", "算数":"bg-blue-400", "社会":"bg-orange-800", "理科":"bg-green-700", "生活":"bg-green-400", "音楽":"bg-yellow-400", "ずこう":"bg-purple-400", "体育":"bg-red-400", "道徳":"bg-orange-400", "外国語":"bg-indigo-400" }[s];
+                btn.className = "p-5 rounded-3xl font-black text-2xl shadow-sm active:scale-95 transition-all text-white " + { "国語":"bg-pink-400", "算数":"bg-blue-400", "社会":"bg-orange-800", "理科":"bg-green-700", "生活":"bg-green-400", "音楽":"bg-yellow-400", "図工":"bg-purple-400", "体育":"bg-red-400", "道徳":"bg-orange-400", "外国語":"bg-indigo-400" }[s];
                 btn.innerText = smartConvert(s, lv); btn.onclick = () => onSubjectClick(s); grid.appendChild(btn);
             });
             updateUI(); document.getElementById('subjectModal').classList.remove('hidden');
@@ -263,19 +265,21 @@
             }
         }
 
+        document.getElementById('saveBtn').onclick = () => { if(ricDisplay.innerText.trim()) openSubjectModal(false); };
+        document.getElementById('historyBtn').onclick = () => openSubjectModal(true);
+
         document.getElementById('execSave').onclick = () => {
-            sfx.save(); closeModal('confirmModal'); document.getElementById('canvas').classList.add('suck-in');
+            sfx.save(); closeModal('confirmModal'); canvas.classList.add('suck-in');
             setTimeout(() => {
                 const hist = JSON.parse(localStorage.getItem('furiHistory') || '[]');
                 hist.unshift({ date: new Date().toLocaleString('ja-JP'), subject: window.selectedSubj, text: ricDisplay.innerText, images: [...attachedImages] });
                 localStorage.setItem('furiHistory', JSON.stringify(hist));
-                masterData = []; attachedImages = []; renderPhotoPreview(); renderDisplay();
-                document.getElementById('canvas').classList.remove('suck-in');
+                fullConversation = []; currentKanjiText = ""; ricDisplay.innerText = ""; attachedImages = []; renderPhotoPreview(); renderDisplay();
+                canvas.classList.remove('suck-in');
             }, 850);
         };
 
         function showHistory(subject) {
-            sfx.click();
             const list = document.getElementById('historyDetailList'); const data = JSON.parse(localStorage.getItem('furiHistory') || '[]');
             const filtered = data.filter(item => item.subject === subject);
             document.getElementById('historyDetailTitle').innerText = `🎁 ${smartConvert(subject, getGradeLevel())}の きろく`;
@@ -299,56 +303,35 @@
         function closePhotoViewer() { sfx.click(); document.getElementById('photoViewerModal').classList.add('hidden'); }
         function closeModal(id) { sfx.click(); document.getElementById(id).classList.add('hidden'); }
 
+        // --- 音声認識 ---
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (SpeechRecognition) {
             const rec = new SpeechRecognition(); rec.lang = 'ja-JP'; rec.interimResults = true;
-            document.getElementById('micBtn').onclick = () => { sfx.click(); if (!isRunning) { lastCursorPosition = getCursorCharacterOffset(ricDisplay); rec.start(); } else { rec.stop(); } };
+            document.getElementById('micBtn').onclick = () => { 
+                sfx.click(); 
+                if (!isRunning) {
+                    lastCursorPosition = getCursorCharacterOffset(ricDisplay); // 挿入位置を記録
+                    rec.start(); 
+                } else {
+                    rec.stop(); 
+                }
+            };
             document.getElementById('listenBtn').onclick = () => {
                 sfx.click(); window.speechSynthesis.cancel();
-                const uttr = new SpeechSynthesisUtterance(kanjiDisplay.innerText || "なにか かいてね");
+                const uttr = new SpeechSynthesisUtterance(currentKanjiText || ricDisplay.innerText || "なにか かいてね");
                 uttr.lang = 'ja-JP'; uttr.rate = 0.85; window.speechSynthesis.speak(uttr);
             };
-            document.getElementById('clearBtn').onclick = () => { sfx.click(); if(confirm("全部消す？")) { masterData = []; attachedImages = []; renderPhotoPreview(); renderDisplay(); } };
+            document.getElementById('clearBtn').onclick = () => { sfx.click(); if(confirm("全部消す？")) { fullConversation = []; currentKanjiText = ""; ricDisplay.innerText = ""; attachedImages = []; renderPhotoPreview(); renderDisplay(); } };
+            document.getElementById('backspaceBtn').onclick = () => { sfx.click(); ricDisplay.focus(); document.execCommand('delete'); currentKanjiText = ricDisplay.innerText; };
+            document.getElementById('newLineBtn').onclick = () => { sfx.click(); ricDisplay.focus(); document.execCommand('insertLineBreak'); currentKanjiText = ricDisplay.innerText; };
             
-            document.getElementById('backspaceBtn').onclick = () => {
-                sfx.click(); 
-                const pos = getCursorCharacterOffset(ricDisplay);
-                if (pos > 0) {
-                    masterData.splice(pos - 1, 1);
-                    renderDisplay();
-                    setCursorPosition(ricDisplay, pos - 1);
-                }
-            };
-            document.getElementById('newLineBtn').onclick = () => {
-                sfx.click(); 
-                const pos = getCursorCharacterOffset(ricDisplay);
-                masterData.splice(pos, 0, {s: "\n", f: ""});
-                renderDisplay();
-                setCursorPosition(ricDisplay, pos + 1);
-            };
-
             rec.onstart = () => { isRunning = true; document.getElementById('micBtn').classList.add('bg-red-500', 'pulse-red'); updateUI(); };
             rec.onresult = (e) => {
-                let final = ''; for (let i = e.resultIndex; i < e.results.length; i++) if (e.results[i].isFinal) final += e.results[i][0].transcript;
-                if (final) sendToGas(final);
+                let interim = ''; let final = '';
+                for (let i = e.resultIndex; i < e.results.length; i++) if (e.results[i].isFinal) final += e.results[i][0].transcript;
+                if (final) { preview.innerText = "へんかん中..."; sendToGas(final); }
             };
-            rec.onend = () => { isRunning = false; document.getElementById('micBtn').classList.remove('bg-red-500', 'pulse-red'); updateUI(); };
-        }
-
-        function setCursorPosition(el, pos) {
-            const range = document.createRange(); const sel = window.getSelection();
-            let currentPos = 0; let node = null;
-            function traverse(parent) {
-                for (let n of parent.childNodes) {
-                    if (n.nodeType === 3) {
-                        if (currentPos + n.length >= pos) { node = n; return true; }
-                        currentPos += n.length;
-                    } else { if (traverse(n)) return true; }
-                }
-            }
-            traverse(el);
-            if (node) { range.setStart(node, pos - currentPos); range.collapse(true); sel.removeAllRanges(); sel.addRange(range); }
-            el.focus();
+            rec.onend = () => { isRunning = false; document.getElementById('micBtn').classList.remove('bg-red-500', 'pulse-red'); updateUI(); preview.innerText = ""; };
         }
 
         async function sendToGas(text) {
@@ -356,30 +339,26 @@
                 const res = await fetch(`${GAS_URL}?text=${encodeURIComponent(text)}`);
                 const d = await res.json();
                 if (d.words_all) {
-                    let newChars = [];
-                    d.words_all.forEach(w => {
-                        if (w.surface.length === 1) { newChars.push({s: w.surface, f: w.furigana}); }
-                        else { for (let i=0; i<w.surface.length; i++) { newChars.push({s: w.surface[i], f: i === 0 ? w.furigana : ""}); } }
-                    });
-                    masterData.splice(lastCursorPosition, 0, ...newChars);
+                    // 現在のテキストの総文字数と挿入位置から、配列のどこに入れるべきか計算
+                    let charCount = 0;
+                    let insertIndex = fullConversation.length;
+                    for(let i=0; i<fullConversation.length; i++){
+                        if (charCount >= lastCursorPosition) { insertIndex = i; break; }
+                        charCount += (fullConversation[i].surface === "\n" ? 0 : fullConversation[i].surface.length);
+                    }
+                    // 配列の途中に挿入
+                    fullConversation.splice(insertIndex, 0, ...d.words_all);
+                    // 漢字テキストも再構築
+                    currentKanjiText = fullConversation.map(w => w.surface).join('');
                     renderDisplay();
-                    setCursorPosition(ricDisplay, lastCursorPosition + newChars.length);
                 }
             } catch (e) {}
         }
 
-        ricDisplay.oninput = (e) => {
-            if (e.inputType === "insertText" || e.inputType === "deleteContentBackward") {
-                const text = ricDisplay.innerText;
-                const newMaster = [];
-                for(let char of text) { newMaster.push({s: char, f: char}); }
-                masterData = newMaster;
-                kanjiDisplay.innerText = text;
-            }
+        // 直接編集時のイベント
+        ricDisplay.onblur = () => {
+            currentKanjiText = ricDisplay.innerText;
         };
-
-        document.getElementById('saveBtn').onclick = () => { sfx.click(); if(ricDisplay.innerText.trim()) openSubjectModal(false); };
-        document.getElementById('historyBtn').onclick = () => { sfx.click(); openSubjectModal(true); };
 
         renderDisplay();
     </script>
