@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>学びの足跡 v2.5</title>
+    <title>学びの足跡 v2.6</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { height: 100dvh; display: flex; flex-direction: column; overflow: hidden; background-color: #fffbeb; }
@@ -15,12 +15,12 @@
         
         #richDisplay { outline: none; flex: 1; overflow-y: auto; padding-bottom: 20px; }
         .q-label { color: #f97316; font-size: 1rem; font-weight: 900; margin-top: 1rem; display: block; border-bottom: 2px solid #ffedd5; width: fit-content; user-select: none; }
-        .a-block { color: #374151; font-size: 1.25rem; font-weight: 900; line-height: 1.5; min-height: 1.2em; word-break: break-all; outline: none; caret-color: #38bdf8; }
-        .current-step-box { background: #fff7ed; padding: 10px; border-radius: 15px; border: 3px solid #fdba74; margin-bottom: 8px; }
+        .a-block { color: #374151; font-size: 1.25rem; font-weight: 900; line-height: 1.5; min-height: 1.5em; word-break: break-all; outline: none; caret-color: #38bdf8; padding: 5px 0; }
+        .current-step-box { background: #fff7ed; padding: 10px; border-radius: 15px; border: 3px solid #fdba74; margin-bottom: 8px; min-height: 50px; }
         .photo-thumb { width: 60px; height: 60px; object-fit: cover; border-radius: 12px; border: 3px solid white; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
     </style>
 </head>
-<body class="p-3 select-none" onclick="if(audioCtx.state==='suspended') audioCtx.resume();">
+<body class="p-3 select-none">
 
     <div class="w-full max-w-3xl flex justify-between items-center mb-3 shrink-0 relative z-10 h-10">
         <button id="historyBtn" class="bg-white border-2 border-orange-200 rounded-full px-4 py-1 shadow-sm active:scale-90 flex items-center gap-1 z-20">
@@ -40,7 +40,8 @@
 
     <div id="canvas" class="flex-1 w-full max-w-3xl bg-white rounded-[2rem] shadow-inner border-4 border-orange-100 p-5 mb-4 flex flex-col sketchbook relative min-h-0 z-10">
         <div id="stepIndicator" class="text-orange-300 font-black text-[10px] mb-1 italic"></div>
-        <div id="currentQuestionBox" class="current-step-box text-lg font-black text-orange-600"></div>
+        <div id="currentQuestionBox" class="current-step-box text-lg font-black text-orange-600 flex items-center">
+            </div>
         <div id="richDisplay"></div>
         <div id="photoPreview" class="flex gap-2 py-1 shrink-0 overflow-x-auto"></div>
         <div id="kanjiDisplay" class="shrink-0 w-full text-xs font-bold text-gray-300 border-t border-gray-100 pt-1 italic opacity-60"></div>
@@ -51,14 +52,14 @@
             <button id="micBtn" class="relative bg-sky-400 border-4 border-sky-100 rounded-2xl py-4 shadow-lg active:scale-95 flex flex-col items-center justify-center text-white">
                 <div class="step-num text-sky-400">1</div><span id="label-mic" class="text-xl font-black italic">おしてね</span><span class="text-[8px] font-bold opacity-80 uppercase">Talk</span>
             </button>
-            <button id="listenBtn" class="relative bg-green-400 border-4 border-green-100 rounded-2xl py-4 shadow-lg active:scale-95 flex flex-col items-center justify-center text-white">
-                <div class="step-num text-green-400">2</div><span class="text-2xl">📢</span><span class="text-[10px] font-black italic">きいてみる</span>
+            <button id="listenBtn" class="relative bg-green-400 border-4 border-green-100 rounded-2xl py-4 shadow-lg active:scale-95 flex flex-col items-center justify-center text-white leading-none">
+                <div class="step-num text-green-400">2</div><span class="text-2xl mb-1">📢</span><span id="label-listen" class="text-[10px] font-black italic">きいてみる</span>
             </button>
-            <button id="cameraBtn" class="relative bg-sky-500 border-4 border-sky-200 rounded-2xl py-4 shadow-lg active:scale-95 flex flex-col items-center justify-center text-white">
-                <div class="step-num text-sky-500">3</div><span class="text-2xl">📷</span><span class="text-[10px] font-black italic">しゃしん</span><input type="file" id="fileInput" accept="image/*" multiple class="hidden">
+            <button id="cameraBtn" class="relative bg-sky-500 border-4 border-sky-200 rounded-2xl py-4 shadow-lg active:scale-95 flex flex-col items-center justify-center text-white leading-none">
+                <div class="step-num text-sky-500">3</div><span class="text-2xl mb-1">📷</span><span id="label-photo" class="text-[10px] font-black italic">しゃしん</span><input type="file" id="fileInput" accept="image/*" multiple class="hidden">
             </button>
-            <button id="saveBtn" class="relative bg-orange-400 border-4 border-orange-100 rounded-2xl py-4 shadow-lg active:scale-95 flex flex-col items-center justify-center text-white">
-                <div class="step-num text-orange-400">4</div><span class="text-2xl" id="saveIcon">➡️</span><span id="label-save" class="text-[10px] font-black">つぎへ</span>
+            <button id="saveBtn" class="relative bg-orange-400 border-4 border-orange-100 rounded-2xl py-4 shadow-lg active:scale-95 flex flex-col items-center justify-center text-white leading-none">
+                <div class="step-num text-orange-400">4</div><span class="text-2xl mb-1" id="saveIcon">➡️</span><span id="label-save" class="text-[10px] font-black">つぎへ</span>
             </button>
         </div>
         <div class="grid grid-cols-4 gap-2 px-1 pb-3">
@@ -69,21 +70,24 @@
         </div>
     </div>
 
-    <div id="historyModal" class="hidden modal-bg"><div class="bg-white rounded-[2rem] p-6 w-full max-w-lg h-[80vh] flex flex-col shadow-2xl"><h2 class="text-2xl font-black text-orange-400 mb-4 text-center">🎁 過去のきろく</h2><div id="historyList" class="flex-1 overflow-y-auto space-y-4"></div><button onclick="closeModal('historyModal')" class="w-full mt-4 bg-orange-400 text-white py-4 rounded-2xl font-black">とじる</button></div></div>
-    <div id="subjectModal" class="hidden modal-bg"><div class="bg-white rounded-3xl p-8 w-full max-w-md shadow-2xl"><h2 class="text-2xl font-black text-orange-400 mb-6 text-center">どの 教科？</h2><div id="subjectGrid" class="grid grid-cols-2 gap-3"></div><button onclick="closeModal('subjectModal')" class="w-full mt-6 text-gray-400 font-bold">やめる</button></div></div>
-    <div id="confirmModal" class="hidden modal-bg"><div class="bg-white rounded-3xl p-10 w-full max-w-sm text-center border-8 border-orange-50"><p id="confirmText" class="text-xl font-black text-gray-700 mb-8"></p><div class="flex gap-4"><button onclick="closeModal('confirmModal')" class="flex-1 bg-gray-100 py-4 rounded-xl font-bold text-gray-400">いいえ</button><button id="execSave" class="flex-1 bg-orange-500 py-4 rounded-xl font-black text-white shadow-lg">はい！</button></div></div></div>
+    <div id="historyModal" class="hidden modal-bg"><div class="bg-white rounded-[2rem] p-6 w-full max-w-lg h-[80vh] flex flex-col"><h2 class="text-2xl font-black text-orange-400 mb-4 text-center">🎁 きろく</h2><div id="historyList" class="flex-1 overflow-y-auto"></div><button onclick="closeModal('historyModal')" class="w-full mt-4 bg-orange-400 text-white py-4 rounded-2xl font-black">とじる</button></div></div>
+    <div id="subjectModal" class="hidden modal-bg"><div class="bg-white rounded-3xl p-8 w-full max-w-md"><h2 class="text-2xl font-black text-orange-400 mb-6 text-center">教科を えらんでね</h2><div id="subjectGrid" class="grid grid-cols-2 gap-3"></div><button onclick="closeModal('subjectModal')" class="w-full mt-6 text-gray-400">やめる</button></div></div>
+    <div id="confirmModal" class="hidden modal-bg"><div class="bg-white rounded-3xl p-10 w-full max-w-sm text-center"><p id="confirmText" class="text-xl font-black text-gray-700 mb-8"></p><div class="flex gap-4"><button onclick="closeModal('confirmModal')" class="flex-1 bg-gray-100 py-4 rounded-xl">いいえ</button><button id="execSave" class="flex-1 bg-orange-500 text-white py-4 rounded-xl font-black">はい！</button></div></div></div>
 
     <script>
-        const GAS_URL = 'https://script.google.com/macros/s/AKfycbxxE14tNshFIqZHwzhyGQtRDeSazD9aPex9Tm0gIGJjmUvd8jAiFN-bkQyNIt_D9cV_/exec';
         const QUESTIONS = ["①きょうの めあて", "②できたこと、うまくいったこと", "③むずかしかったこと", "④つぎのじかんに やってみたいこと"];
         const KANJI_LISTS = { 1: "一右雨円王音下火花貝学気九休玉金空月犬見五口校左三山子四糸字耳七車手十出女小上森人水正生青夕石赤千川先早草足村大男竹中虫町天田土二日入年白八百文木本名目立力林六", 2: "引羽雲園遠何科夏家歌画回会海絵外角楽活間丸岩顔汽記帰弓牛魚京強教近兄形計元言原戸古午後語工公広交光考行高黄合谷国黒今才細作算止市矢姉思紙寺自時室社弱首秋週春書少場色食心新親図数西声星晴切雪船線前組走多太体台地池知茶昼長鳥朝直通弟店点電刀冬當東答頭同道読内南肉馬売買麦半番父風分聞米歩母方北毎妹万明鳴毛門夜野友用曜来里理話" };
 
         let state = { step: 0, masterData: [], images: [], voiceEnabled: true };
-        let lastCaretPos = 0;
-
-        // 音響システム
-        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        let audioCtx;
+        
+        // 音声・効果音エンジンの初期化（ユーザー操作で発火）
+        function initAudio() {
+            if (audioCtx) return;
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
         function playSfx(f, t, d) {
+            if (!audioCtx) return;
             const o = audioCtx.createOscillator(); const g = audioCtx.createGain();
             o.type = t; o.frequency.setValueAtTime(f, audioCtx.currentTime);
             g.gain.setValueAtTime(0.05, audioCtx.currentTime); g.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + d);
@@ -91,33 +95,49 @@
         }
         const sfx = { click: () => playSfx(600, 'sine', 0.1), pop: () => playSfx(800, 'sine', 0.1), save: () => playSfx(1200, 'sine', 0.5) };
 
-        const saveToLocal = () => localStorage.setItem('furiBox_v25', JSON.stringify(state));
-        const loadFromLocal = () => { const s = localStorage.getItem('furiBox_v25'); if(s) state = JSON.parse(s); };
+        function saveToLocal() { localStorage.setItem('furiBox_v26', JSON.stringify(state)); }
+        function loadFromLocal() {
+            try {
+                const s = localStorage.getItem('furiBox_v26');
+                if (s) {
+                    const loaded = JSON.parse(s);
+                    if (loaded && typeof loaded.step === 'number') state = loaded;
+                }
+            } catch(e) { console.error("Data load error", e); }
+        }
 
-        function speak(t) { if(!state.voiceEnabled) return; window.speechSynthesis.cancel(); const u = new SpeechSynthesisUtterance(t.replace(/^[①-④]\s*/, '')); u.lang='ja-JP'; u.rate=0.8; window.speechSynthesis.speak(u); }
+        function speak(t) {
+            if (!state.voiceEnabled) return;
+            window.speechSynthesis.cancel();
+            const u = new SpeechSynthesisUtterance(t.replace(/^[①-④]\s*/, ''));
+            u.lang = 'ja-JP'; u.rate = 0.8;
+            window.speechSynthesis.speak(u);
+        }
 
         function getCaretCharacterOffsetWithin(element) {
             let offset = 0; const sel = window.getSelection();
-            if (sel.rangeCount > 0) {
+            if (sel && sel.rangeCount > 0) {
                 const range = sel.getRangeAt(0); const preCaretRange = range.cloneRange();
-                preCaretRange.selectNodeContents(element); preCaretRange.setEnd(range.endContainer, range.endOffset);
+                preCaretRange.selectNodeContents(element); preCaretRange.setEnd(range.startContainer, range.startOffset);
                 offset = preCaretRange.toString().length;
             }
             return offset;
         }
 
         function renderDisplay() {
-            const lv = parseInt(gradeMode.value);
+            const lv = parseInt(document.getElementById('gradeMode').value);
             const allowed = (l) => { let s=""; for(let i=1;i<=l;i++) s+=KANJI_LISTS[i]||""; return s; }(lv);
             let html = ""; let fullText = "";
+            
             for (let i = 0; i <= state.step; i++) {
                 html += `<span class="q-label">${QUESTIONS[i]}</span>`;
                 const stepChars = state.masterData.filter(c => c.step === i);
-                html += `<div id="step-area-${i}" class="a-block" ${i===state.step?'contenteditable="true"':''}>`;
+                const isCurrent = (i === state.step);
+                html += `<div id="step-area-${i}" class="a-block" ${isCurrent ? 'contenteditable="true"' : ''}>`;
                 stepChars.forEach(c => {
                     if (c.s === "\n") html += "<br>";
                     else {
-                        let s = (lv!==99 && (c.s >= '\u4e00' && c.s <= '\u9faf') && !allowed.includes(c.s)) ? (c.f || c.s) : c.s;
+                        let s = (lv !== 99 && (c.s >= '\u4E00' && c.s <= '\u9FAF') && !allowed.includes(c.s)) ? (c.f || c.s) : c.s;
                         html += s;
                     }
                     fullText += c.s;
@@ -128,23 +148,42 @@
             document.getElementById('kanjiDisplay').innerText = fullText;
             
             const area = document.getElementById(`step-area-${state.step}`);
-            if(area) {
-                area.onblur = () => { lastCaretPos = getCaretCharacterOffsetWithin(area); };
+            if (area) {
                 area.oninput = () => {
-                    const text = area.innerText;
                     const others = state.masterData.filter(c => c.step !== state.step);
-                    const current = []; for(let char of text) current.push({s:char, f:char, step:state.step});
-                    state.masterData = [...others, ...current]; saveToLocal();
+                    const current = [];
+                    for (let char of area.innerText) current.push({s: char, f: char, step: state.step});
+                    state.masterData = [...others, ...current];
+                    saveToLocal();
                 };
             }
             document.getElementById('richDisplay').scrollTop = document.getElementById('richDisplay').scrollHeight;
         }
 
+        function initStep() {
+            document.getElementById('stepIndicator').innerText = `STEP ${state.step + 1} / 4`;
+            document.getElementById('currentQuestionBox').innerText = QUESTIONS[state.step];
+            document.getElementById('saveIcon').innerText = (state.step === 3) ? "💰" : "➡️";
+            renderDisplay();
+            renderPhotos();
+            speak(QUESTIONS[state.step]);
+        }
+
+        // --- Event Listeners ---
+        document.getElementById('micBtn').onclick = () => {
+            initAudio(); sfx.click();
+            if (!isRunning) {
+                const area = document.getElementById(`step-area-${state.step}`);
+                window.lastCaretPos = getCaretCharacterOffsetWithin(area);
+                rec.start();
+            } else rec.stop();
+        };
+
         document.getElementById('backspaceBtn').onclick = () => {
             sfx.click(); const area = document.getElementById(`step-area-${state.step}`);
             const pos = getCaretCharacterOffsetWithin(area);
             const stepChars = state.masterData.filter(c => c.step === state.step);
-            if(pos > 0) {
+            if (pos > 0) {
                 stepChars.splice(pos - 1, 1);
                 state.masterData = [...state.masterData.filter(c => c.step !== state.step), ...stepChars];
                 renderDisplay(); saveToLocal();
@@ -160,40 +199,26 @@
             renderDisplay(); saveToLocal();
         };
 
-        document.getElementById('cameraBtn').onclick = () => { sfx.click(); document.getElementById('fileInput').click(); };
-        document.getElementById('fileInput').onchange = (e) => {
-            const files = Array.from(e.target.files);
-            files.forEach(file => {
-                const reader = new FileReader();
-                reader.onload = (ev) => {
-                    const img = new Image();
-                    img.onload = () => {
-                        const canvas = document.createElement('canvas'); const max = 600;
-                        let w = img.width, h = img.height;
-                        if(w > h) { if(w > max) { h *= max/w; w = max; } } else { if(h > max) { w *= max/h; h = max; } }
-                        canvas.width = w; canvas.height = h;
-                        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-                        state.images.push(canvas.toDataURL('image/jpeg', 0.6));
-                        renderPhotos(); saveToLocal();
-                    };
-                    img.src = ev.target.result;
-                };
-                reader.readAsDataURL(file);
-            });
+        document.getElementById('saveBtn').onclick = () => {
+            initAudio(); sfx.click();
+            if (state.step < 3) { state.step++; saveToLocal(); initStep(); }
+            else openSubjectModal();
         };
-        function renderPhotos() {
-            document.getElementById('photoPreview').innerHTML = state.images.map((src, i) => `<img src="${src}" class="photo-thumb" onclick="sfx.pop(); state.images.splice(${i},1); renderPhotos();">`).join('');
-        }
 
+        document.getElementById('backStepBtn').onclick = () => { sfx.pop(); if (state.step > 0) { state.step--; initStep(); } };
+        document.getElementById('cameraBtn').onclick = () => { sfx.click(); document.getElementById('fileInput').click(); };
+        document.getElementById('listenBtn').onclick = () => { initAudio(); sfx.click(); speak(state.masterData.filter(c=>c.step===state.step).map(c=>c.s).join('') || "なにかお話ししてね"); };
+        document.getElementById('historyBtn').onclick = () => { sfx.pop(); showHistory(); };
+        document.getElementById('clearBtn').onclick = () => { if(confirm("全部消して 最初からにする？")) { localStorage.removeItem('furiBox_v26'); location.reload(); } };
+        document.getElementById('gradeMode').onchange = () => renderDisplay();
+        document.getElementById('voiceToggle').onclick = () => { state.voiceEnabled = !state.voiceEnabled; document.getElementById('voiceToggle').innerText = state.voiceEnabled ? "ON" : "OFF"; saveToLocal(); };
+
+        // --- 音声認識 ---
         let isRunning = false;
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-        if (SpeechRecognition) {
-            const rec = new SpeechRecognition(); rec.lang = 'ja-JP'; rec.interimResults = true;
-            document.getElementById('micBtn').onclick = () => { sfx.click(); if(!isRunning) { 
-                const area = document.getElementById(`step-area-${state.step}`);
-                lastCaretPos = getCaretCharacterOffsetWithin(area);
-                rec.start(); 
-            } else rec.stop(); };
+        const rec = SpeechRecognition ? new SpeechRecognition() : null;
+        if (rec) {
+            rec.lang = 'ja-JP'; rec.interimResults = true;
             rec.onstart = () => { isRunning = true; document.getElementById('micBtn').classList.add('bg-red-500', 'pulse-red'); };
             rec.onresult = (e) => {
                 let final = ''; for (let i = e.resultIndex; i < e.results.length; i++) if (e.results[i].isFinal) final += e.results[i][0].transcript;
@@ -204,58 +229,68 @@
 
         async function sendToGas(text) {
             try {
-                const res = await fetch(`${GAS_URL}?text=${encodeURIComponent(text)}`);
+                const res = await fetch(`https://script.google.com/macros/s/AKfycbxxE14tNshFIqZHwzhyGQtRDeSazD9aPex9Tm0gIGJjmUvd8jAiFN-bkQyNIt_D9cV_/exec?text=${encodeURIComponent(text)}`);
                 const d = await res.json();
                 if (d.words_all) {
                     const newChars = [];
                     d.words_all.forEach(w => { for(let i=0; i<w.surface.length; i++) newChars.push({s:w.surface[i], f:i===0?w.furigana:"", step:state.step}); });
                     const stepChars = state.masterData.filter(c => c.step === state.step);
-                    stepChars.splice(lastCaretPos, 0, ...newChars);
+                    stepChars.splice(window.lastCaretPos || 0, 0, ...newChars);
                     state.masterData = [...state.masterData.filter(c => c.step !== state.step), ...stepChars];
-                    lastCaretPos += newChars.length;
+                    window.lastCaretPos += newChars.length;
                     renderDisplay(); saveToLocal();
                 }
             } catch (e) {}
         }
 
-        document.getElementById('saveBtn').onclick = () => { sfx.click(); if (state.step < 3) { state.step++; saveToLocal(); initStep(); } else openSubjectModal(); };
-        document.getElementById('backStepBtn').onclick = () => { sfx.pop(); if (state.step > 0) { state.step--; saveToLocal(); initStep(); } };
-        document.getElementById('listenBtn').onclick = () => { sfx.click(); speak(state.masterData.filter(c=>c.step===state.step).map(c=>c.s).join('') || "なにかお話ししてね"); };
-        document.getElementById('historyBtn').onclick = () => { sfx.pop(); showHistory(); };
-        document.getElementById('clearBtn').onclick = () => { if(confirm("全部消す？")) { localStorage.removeItem('furiBox_v25'); location.reload(); } };
+        // --- 画像 ---
+        document.getElementById('fileInput').onchange = (e) => {
+            Array.from(e.target.files).forEach(file => {
+                const r = new FileReader();
+                r.onload = (ev) => {
+                    const i = new Image();
+                    i.onload = () => {
+                        const c = document.createElement('canvas'); const m = 600;
+                        let w = i.width, h = i.height;
+                        if(w > h) { if(w > m) { h *= m/w; w = m; } } else { if(h > m) { w *= m/h; h = m; } }
+                        c.width = w; c.height = h; c.getContext('2d').drawImage(i, 0, 0, w, h);
+                        state.images.push(c.toDataURL('image/jpeg', 0.6)); renderPhotos(); saveToLocal();
+                    };
+                    i.src = ev.target.result;
+                };
+                r.readAsDataURL(file);
+            });
+        };
+        function renderPhotos() { document.getElementById('photoPreview').innerHTML = state.images.map((s, i) => `<img src="${s}" class="photo-thumb" onclick="state.images.splice(${i},1); renderPhotos();">`).join(''); }
 
-        function initStep() {
-            document.getElementById('stepIndicator').innerText = `STEP ${state.step + 1} / 4`;
-            document.getElementById('currentQuestionBox').innerText = QUESTIONS[state.step];
-            document.getElementById('saveIcon').innerText = (state.step === 3) ? "💰" : "➡️";
-            speak(QUESTIONS[state.step]); renderDisplay(); renderPhotos();
-        }
+        // --- 保存・履歴 ---
         function openSubjectModal() {
-            sfx.pop(); const g = document.getElementById('subjectGrid'); g.innerHTML = "";
+            const g = document.getElementById('subjectGrid'); g.innerHTML = "";
             ["国語", "算数", "生活", "音楽", "図工", "体育", "道徳"].forEach(s => {
                 const b = document.createElement('button'); b.className = "p-4 rounded-xl text-white bg-orange-400 font-black";
-                b.innerText = s; b.onclick = () => { window.selSub = s; document.getElementById('confirmText').innerText = s + "に記録する？"; document.getElementById('subjectModal').classList.add('hidden'); document.getElementById('confirmModal').classList.remove('hidden'); };
+                b.innerText = s; b.onclick = () => { window.selSub = s; document.getElementById('confirmText').innerText = s + "に記録する？"; closeModal('subjectModal'); document.getElementById('confirmModal').classList.remove('hidden'); };
                 g.appendChild(b);
             });
             document.getElementById('subjectModal').classList.remove('hidden');
-        }
-        function showHistory() {
-            const l = document.getElementById('historyList'); const d = JSON.parse(localStorage.getItem('fHistory') || '[]');
-            l.innerHTML = d.length ? "" : "<p class='text-center text-gray-400 py-10'>きろくなし</p>";
-            d.forEach(item => {
-                const div = document.createElement('div'); div.className = "bg-orange-50 p-4 rounded-2xl border-l-4 border-orange-400";
-                div.innerHTML = `<div class='text-[10px] text-orange-300'>${item.date} [${item.subject}]</div><p class='text-sm font-bold'>${item.text}</p>`;
-                l.appendChild(div);
-            });
-            document.getElementById('historyModal').classList.remove('hidden');
         }
         document.getElementById('execSave').onclick = () => {
             sfx.save(); const h = JSON.parse(localStorage.getItem('fHistory') || '[]');
             let full = ""; for(let i=0; i<4; i++) { const t = state.masterData.filter(c=>c.step===i).map(c=>c.s).join(''); if(t) full += QUESTIONS[i]+"\n"+t+"\n\n"; }
             h.unshift({ date: new Date().toLocaleString(), subject: window.selSub, text: full.trim(), imgs: [...state.images] });
-            localStorage.setItem('fHistory', JSON.stringify(h)); localStorage.removeItem('furiBox_v25'); location.reload();
+            localStorage.setItem('fHistory', JSON.stringify(h)); localStorage.removeItem('furiBox_v26'); location.reload();
         };
-        function closeModal(id) { sfx.click(); document.getElementById(id).classList.add('hidden'); }
+        function showHistory() {
+            const l = document.getElementById('historyList'); const d = JSON.parse(localStorage.getItem('fHistory') || '[]');
+            l.innerHTML = d.length ? "" : "<p class='text-center text-gray-400 py-10'>きろくは まだ ありません</p>";
+            d.forEach(item => {
+                const div = document.createElement('div'); div.className = "bg-orange-50 p-4 rounded-2xl border-l-4 border-orange-400 mb-3";
+                div.innerHTML = `<div class='text-[10px] text-orange-300'>${item.date} [${item.subject}]</div><p class='text-sm font-bold whitespace-pre-wrap'>${item.text}</p>`;
+                l.appendChild(div);
+            });
+            document.getElementById('historyModal').classList.remove('hidden');
+        }
+        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
+
         window.onload = () => { loadFromLocal(); initStep(); };
     </script>
 </body>
