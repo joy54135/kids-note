@@ -3,23 +3,24 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>学びの足跡 v5.5</title>
+    <title>学びの足跡 v5.6</title>
     <script src="https://cdn.tailwindcss.com"></script>
     
     <script>
-        // --- データ管理 ---
+        // --- 1. データ管理 ---
         var GAS_URL = 'https://script.google.com/macros/s/AKfycbxxE14tNshFIqZHwzhyGQtRDeSazD9aPex9Tm0gIGJjmUvd8jAiFN-bkQyNIt_D9cV_/exec';
         var appState = { 
             activeId: "", 
             tiles: { t1: [], t2: [], t3: [], t4: [], photos: [] },
             badges: { t1: "", t2: "", t3: "", t4: "" },
-            editingId: null, 
-            originalDate: null 
+            editingId: null 
         };
         var isRec = false;
         var selectedSubject = "";
         var EMOJI_LIST = ["🌸", "⭐", "🦖", "🚀", "🦄", "👑", "💎", "🎈", "🦁", "🐬", "🍭", "🎨", "⚽", "🌈", "✨"];
+        var ALL_SUBJECTS = ["国語", "算数", "生活", "理科", "社会", "音楽", "図工", "体育", "道徳", "外国語"];
 
+        // --- 2. 画面とモーダル操作 ---
         function openEditor(id) {
             appState.activeId = id;
             var overlay = document.getElementById('editorOverlay');
@@ -37,21 +38,61 @@
                 refreshTiles();
             }
             document.getElementById('editorOverlay').style.display = 'none';
-            document.getElementById('editorOverlay').style.pointerEvents = 'none';
         }
 
-        // --- 写真処理（厳格な枚数制限と削除機能） ---
+        function openModal(id) {
+            // 教科ボタンが表示されない問題の対策：開く直前に必ず描画する
+            if(id === 'subjectModal') renderSubjectGrid();
+            if(id === 'historyModal') renderHistorySubjects();
+            
+            var m = document.getElementById(id);
+            m.style.display = 'flex'; m.style.pointerEvents = 'auto'; m.style.zIndex = "10000";
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+
+        // --- 3. 保存・教科ボタン描画 ---
+        function renderSubjectGrid() {
+            var grid = document.getElementById('subjectGrid');
+            grid.innerHTML = ALL_SUBJECTS.map(s => `
+                <button onclick="confirmSave('${s}')" 
+                class="bg-orange-400 text-white p-5 rounded-2xl font-black text-2xl shadow-md active:scale-95 z-[10001] relative">${s}</button>
+            `).join('');
+        }
+
+        function confirmSave(subject) {
+            selectedSubject = subject;
+            closeModal('subjectModal');
+            document.getElementById('confirmText').innerText = subject + "に きろくする？";
+            openModal('confirmModal');
+        }
+
+        function executeSave() {
+            var history = JSON.parse(localStorage.getItem('furi_v56_history') || '[]');
+            if (appState.editingId) {
+                var index = history.findIndex(h => h.id === appState.editingId);
+                if (index !== -1) history[index].fullData = JSON.parse(JSON.stringify(appState.tiles));
+            } else {
+                history.unshift({ id: Date.now(), date: new Date().toLocaleString('ja-JP'), subject: selectedSubject, fullData: JSON.parse(JSON.stringify(appState.tiles)) });
+            }
+            localStorage.setItem('furi_v56_history', JSON.stringify(history.slice(0, 30)));
+            alert('たからばこに いれたよ！');
+            location.reload();
+        }
+
+        // --- 4. 写真処理（3枚目拒否と削除） ---
         function handlePhotos(input) {
             var currentCount = appState.tiles.photos.length;
-            if (currentCount >= 2) {
-                alert("しゃしんは 2枚まで です。いらない写真を ✖ で けしてね。");
+            var selectedFiles = Array.from(input.files);
+
+            if (currentCount >= 2 || (currentCount + selectedFiles.length) > 2) {
+                alert("しゃしんは 2枚まで です。");
                 input.value = ""; return;
             }
 
-            // 選ばれたファイルの中から、空き枠分だけを取り出す
-            var files = Array.from(input.files).slice(0, 2 - currentCount);
-            
-            files.forEach(file => {
+            selectedFiles.forEach(file => {
                 var reader = new FileReader();
                 reader.onload = e => {
                     var img = new Image();
@@ -60,23 +101,22 @@
                         if(w > h) { if(w > max){ h *= max/w; w = max; } } else { if(h > max){ w *= max/h; h = max; } }
                         canvas.width = w; canvas.height = h;
                         canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-                        appState.tiles.photos.push(canvas.toDataURL('image/jpeg', 0.7)); 
-                        refreshTiles();
+                        appState.tiles.photos.push(canvas.toDataURL('image/jpeg', 0.7)); refreshTiles();
                     };
                     img.src = e.target.result;
                 };
                 reader.readAsDataURL(file);
             });
-            input.value = ""; // リセットして再選択可能に
+            input.value = "";
         }
 
         function deletePhoto(index) {
             if (confirm("この写真を けしますか？")) {
-                appState.tiles.photos.splice(index, 1);
-                refreshTiles();
+                appState.tiles.photos.splice(index, 1); refreshTiles();
             }
         }
 
+        // --- 5. 描画更新 ---
         function refreshTiles() {
             ['t1','t2','t3','t4'].forEach(id => {
                 var txt = appState.tiles[id].map(w => w.surface).join('');
@@ -94,27 +134,11 @@
                     <button class="delete-btn" onclick="event.stopPropagation(); deletePhoto(${idx})">✖</button>
                 </div>
             `).join('');
-            document.getElementById('photoLabel').innerText = appState.tiles.photos.length + " / 2枚";
+            // カウントを更新
+            document.getElementById('photoLabelInner').innerText = appState.tiles.photos.length + " / 2枚";
         }
 
-        // --- 共通機能（省略なし） ---
-        function viewPhoto(src) { document.getElementById('fullPhoto').src = src; document.getElementById('photoViewer').style.display = 'flex'; }
-        function closePhoto() { document.getElementById('photoViewer').style.display = 'none'; }
-        function openModal(id) { document.getElementById(id).style.display = 'flex'; document.getElementById(id).style.pointerEvents = 'auto'; }
-        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
-
-        function executeSave() {
-            var history = JSON.parse(localStorage.getItem('furi_v55_history') || '[]');
-            if (appState.editingId) {
-                var index = history.findIndex(h => h.id === appState.editingId);
-                if (index !== -1) history[index].fullData = JSON.parse(JSON.stringify(appState.tiles));
-            } else {
-                history.unshift({ id: Date.now(), date: new Date().toLocaleString('ja-JP'), subject: selectedSubject, fullData: JSON.parse(JSON.stringify(appState.tiles)) });
-            }
-            localStorage.setItem('furi_v55_history', JSON.stringify(history.slice(0, 30)));
-            location.reload();
-        }
-
+        // --- その他音声認識など ---
         var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         var rec = SpeechRecognition ? new SpeechRecognition() : null;
         if(rec) {
@@ -135,6 +159,9 @@
             appState.tiles[appState.activeId].forEach(w => { html += w.furigana || w.surface; kanji += w.surface; });
             document.getElementById('richDisplay').innerHTML = html; document.getElementById('kanjiDisplay').innerText = kanji;
         }
+        function viewPhoto(src) { document.getElementById('fullPhoto').src = src; document.getElementById('photoViewer').style.display = 'flex'; }
+        function closePhoto() { document.getElementById('photoViewer').style.display = 'none'; }
+        
         window.onload = function() { refreshTiles(); };
     </script>
 
@@ -142,25 +169,30 @@
         body { height: 100dvh; background-color: #fffbeb; margin: 0; display: flex; flex-direction: column; overflow: hidden; font-family: sans-serif; }
         .main-container { flex: 1; display: flex; flex-direction: column; padding: 1rem; gap: 0.8rem; min-height: 0; }
         .tiles-grid { flex: 1; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1.2fr 1.2fr 0.8fr; gap: 0.8rem; min-height: 0; }
+        
         .tile-btn { background: white; border: 4px solid #ffedd5; border-radius: 2rem; padding: 1.2rem; display: flex; flex-direction: column; text-align: left; min-height: 0; position: relative; }
+        .tile-label { color: #fb923c; font-weight: 900; font-size: 0.9rem; margin-bottom: 0.4rem; }
         .tile-preview { flex: 1; color: #4b5563; font-weight: 900; overflow: hidden; font-size: 1.4rem; line-height: 1.3; word-break: break-all; }
-        .badge { position: absolute; bottom: 0.5rem; right: 0.5rem; font-size: 2.5rem; pointer-events: none; animation: pop-bounce 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
-        @keyframes pop-bounce { 0% { transform: scale(0) rotate(-20deg); opacity: 0; } 100% { transform: scale(1) rotate(0deg); opacity: 1; } }
+        
+        /* 写真カウント：枠内右上に移動 */
+        #photoLabelInner { position: absolute; top: 1rem; right: 1.2rem; font-size: 0.7rem; font-weight: 900; color: #fdba74; }
 
-        /* 写真削除機能付きUI */
+        .badge { position: absolute; bottom: 0.5rem; right: 0.5rem; font-size: 2.5rem; pointer-events: none; animation: pop-bounce 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+        @keyframes pop-bounce { 0% { transform: scale(0); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+
         .photo-grid-mini { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; height: 100%; padding: 4px; }
         .photo-container { position: relative; background: white; border: 2px solid #ffedd5; border-radius: 1rem; overflow: hidden; height: 100%; width: 100%; }
-        .photo-img-main { width: 100%; height: 100%; object-fit: cover; cursor: pointer; }
-        .delete-btn { 
-            position: absolute; top: 4px; right: 4px; background: rgba(239, 68, 68, 0.9); color: white; 
-            width: 28px; height: 28px; border-radius: 50%; font-weight: bold; font-size: 14px;
-            display: flex; align-items: center; justify-content: center; box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-            border: 2px solid white; z-index: 50;
-        }
+        .photo-img-main { width: 100%; height: 100%; object-fit: cover; }
+        .delete-btn { position: absolute; top: 4px; right: 4px; background: #ef4444; color: white; width: 24px; height: 24px; border-radius: 50%; font-weight: bold; border: 2px solid white; z-index: 50; }
 
-        #editorOverlay, .modal-bg { position: fixed; inset: 0; z-index: 1000; display: none; flex-direction: column; padding: 1.2rem; pointer-events: none; }
-        #editorOverlay { background: #fffbeb; }
-        .modal-bg { background-color: rgba(0,0,0,0.8); backdrop-filter: blur(10px); justify-content: center; }
+        /* モーダル背景：タップで閉じるように設定 */
+        .modal-bg { 
+            position: fixed; inset: 0; z-index: 1000; display: none; flex-direction: column; padding: 1.2rem; 
+            background-color: rgba(0,0,0,0.8); backdrop-filter: blur(10px); justify-content: center; align-items: center;
+        }
+        .modal-content { pointer-events: auto; } /* 中身はタップを遮断しない */
+
+        #editorOverlay { position: fixed; inset: 0; z-index: 1000; display: none; flex-direction: column; padding: 1.2rem; background: #fffbeb; pointer-events: none; }
         #richDisplay { flex: 1; background: white; border: 4px solid #ffedd5; border-radius: 2.5rem; padding: 2rem; font-size: 2.8rem; font-weight: 900; outline: none; overflow-y: auto; }
         #photoViewer { background-color: rgba(0,0,0,0.95); z-index: 99999; justify-content: center; align-items: center; cursor: pointer; pointer-events: auto; }
     </style>
@@ -170,7 +202,7 @@
     <div class="px-4 pt-4 flex justify-between items-center shrink-0">
         <button onclick="openModal('historyModal')" class="bg-white border-2 border-orange-200 rounded-full px-5 py-2 text-sm font-black text-orange-400 active:scale-90">🎁 きろくをみる</button>
         <h1 class="text-2xl font-black text-orange-400 tracking-tighter">学びの足跡</h1>
-        <span id="photoLabel" class="text-[10px] font-black text-orange-300">0 / 2枚</span>
+        <div class="w-20"></div>
     </div>
 
     <div class="main-container">
@@ -180,13 +212,39 @@
             <button class="tile-btn" onclick="openEditor('t3')"><div class="tile-label">③むずかしかった</div><div id="p-t3" class="tile-preview"></div><div id="badge-t3" class="badge" style="display:none;"></div></button>
             <button class="tile-btn" onclick="openEditor('t4')"><div class="tile-label">④つぎのこと</div><div id="p-t4" class="tile-preview"></div><div id="badge-t4" class="badge" style="display:none;"></div></button>
             <button class="tile-btn col-span-2" onclick="document.getElementById('fileInput').click()">
-                <div class="tile-label">しゃしん</div><div id="photoGrid" class="photo-grid-mini"></div>
+                <div class="tile-label">しゃしん</div>
+                <div id="photoLabelInner">0 / 2枚</div>
+                <div id="photoGrid" class="photo-grid-mini"></div>
                 <input type="file" id="fileInput" accept="image/*" multiple style="display:none;" onchange="handlePhotos(this)">
             </button>
         </div>
-        <button onclick="if(appState.editingId){ executeSave(); }else{ openModal('subjectModal'); }" class="w-full bg-orange-400 text-white rounded-[2rem] py-5 font-black text-3xl shadow-xl active:scale-95 shrink-0 border-b-8 border-orange-600">
-            ぜんぶ ほぞんする 💰
-        </button>
+        <button onclick="if(appState.editingId){ executeSave(); }else{ openModal('subjectModal'); }" class="w-full bg-orange-400 text-white rounded-[2rem] py-5 font-black text-3xl shadow-xl active:scale-95 shrink-0 border-b-8 border-orange-600">ぜんぶ ほぞんする 💰</button>
+    </div>
+
+    <div id="subjectModal" class="modal-bg" onclick="if(event.target===this) closeModal('subjectModal')">
+        <div class="bg-white rounded-[3rem] p-8 w-full max-w-lg modal-content border-8 border-orange-100 shadow-2xl text-center">
+            <h2 class="text-3xl font-black text-orange-400 mb-8">どの きょうか？</h2>
+            <div id="subjectGrid" class="grid grid-cols-2 gap-4 mb-6"></div>
+            <button onclick="closeModal('subjectModal')" class="text-gray-400 font-bold text-xl">やめる</button>
+        </div>
+    </div>
+
+    <div id="confirmModal" class="modal-bg" onclick="if(event.target===this) closeModal('confirmModal')">
+        <div class="bg-white rounded-[3rem] p-12 w-full max-w-sm modal-content border-8 border-orange-400 shadow-2xl text-center">
+            <p id="confirmText" class="text-3xl font-black text-gray-700 mb-10"></p>
+            <div class="flex gap-4">
+                <button onclick="closeModal('confirmModal')" class="flex-1 bg-gray-100 py-5 rounded-2xl font-black text-gray-400 text-xl">いいえ</button>
+                <button onclick="executeSave()" class="flex-1 bg-orange-500 py-5 rounded-2xl font-black text-white text-xl shadow-lg">はい！</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="historyModal" class="modal-bg" onclick="if(event.target===this) closeModal('historyModal')">
+        <div class="bg-amber-50 rounded-[3rem] p-8 w-full max-w-2xl h-[85vh] modal-content flex flex-col border-8 border-white shadow-2xl">
+            <h2 id="historyTitle" class="text-3xl font-black text-orange-400 mb-6 text-center italic">🎁 きろく</h2>
+            <div id="historyList" class="flex-1 overflow-y-auto"></div>
+            <button onclick="closeModal('historyModal')" class="w-full mt-6 bg-orange-400 text-white py-5 rounded-[2rem] font-black text-2xl">とじる</button>
+        </div>
     </div>
 
     <div id="photoViewer" class="fixed inset-0" style="display: none;" onclick="closePhoto()">
@@ -194,10 +252,7 @@
         <p class="text-white font-bold mt-6 text-xl text-center">タップして とじる</p>
     </div>
 
-    <div id="historyModal" class="modal-bg"><div class="bg-amber-50 rounded-[3rem] p-8 w-full max-w-2xl h-[85vh] flex flex-col pointer-events-auto border-8 border-white shadow-2xl"><h2 id="historyTitle" class="text-3xl font-black text-orange-400 mb-6 text-center">🎁 きろく</h2><div id="historyList" class="flex-1 overflow-y-auto"></div><button onclick="closeModal('historyModal')" class="w-full mt-6 bg-orange-400 text-white py-5 rounded-[2rem] font-black text-2xl">とじる</button></div></div>
-    <div id="subjectModal" class="modal-bg"><div class="bg-white rounded-[3rem] p-8 w-full max-w-lg pointer-events-auto border-8 border-orange-100 shadow-2xl"><h2 class="text-3xl font-black text-orange-400 mb-8 text-center">どの きょうか？</h2><div id="subjectGrid" class="grid grid-cols-2 gap-4 mb-6"></div><button onclick="closeModal('subjectModal')" class="w-full text-gray-400 font-bold text-xl text-center">やめる</button></div></div>
-
-    <div id="editorOverlay"><div class="flex justify-between items-center mb-4 pointer-events-auto px-2"><button onclick="closeEditor(false)" class="text-gray-400 font-black text-2xl p-2">✖ やめる</button><div id="editorTitle" class="text-orange-400 font-black text-3xl">編集</div><button onclick="closeEditor(true)" class="bg-orange-400 text-white px-12 py-4 rounded-full font-black text-2xl">決定</button></div><div id="richDisplay" contenteditable="true" class="pointer-events-auto shadow-inner"></div><div id="kanjiDisplay" class="text-lg text-gray-300 italic font-bold mt-2 px-4 opacity-50"></div><div class="grid grid-cols-2 gap-6 mt-6 pointer-events-auto"><button id="micBtn" onclick="if(rec) isRec ? rec.stop() : rec.start()" class="bg-sky-400 rounded-[2rem] py-8 text-white font-black text-4xl shadow-xl active:scale-95 transition-all"><span id="micLabel">おしてね</span></button><button onclick="appState.tiles[appState.activeId].pop(); renderEditor();" class="bg-white border-4 border-orange-100 rounded-[2rem] py-8 text-orange-400 font-black text-4xl shadow-md active:scale-95">1字けす</button></div></div>
+    <div id="editorOverlay"><div class="flex justify-between items-center mb-4 pointer-events-auto px-2"><button onclick="closeEditor(false)" class="text-gray-400 font-black text-2xl p-2">✖ やめる</button><div id="editorTitle" class="text-orange-400 font-black text-3xl">編集</div><button onclick="closeEditor(true)" class="bg-orange-400 text-white px-12 py-4 rounded-full font-black text-2xl shadow-lg">決定</button></div><div id="richDisplay" contenteditable="true" class="pointer-events-auto shadow-inner"></div><div id="kanjiDisplay" class="text-lg text-gray-300 italic font-bold mt-2 px-4 opacity-50"></div><div class="grid grid-cols-2 gap-6 mt-6 pointer-events-auto"><button id="micBtn" onclick="if(rec) isRec ? rec.stop() : rec.start()" class="bg-sky-400 rounded-[2rem] py-8 text-white font-black text-4xl shadow-xl active:scale-95"><span id="micLabel">おしてね</span></button><button onclick="appState.tiles[appState.activeId].pop(); renderEditor();" class="bg-white border-4 border-orange-100 rounded-[2rem] py-8 text-orange-400 font-black text-4xl shadow-md">1字けす</button></div></div>
 
 </body>
 </html>
