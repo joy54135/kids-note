@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ひらがな めがね Ver.12.0</title>
+    <title>ひらがな めがね Ver.13.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         @keyframes pop { 0% { transform: scale(0.5) opacity: 0; } 100% { transform: scale(1) opacity: 1; } }
@@ -21,9 +21,9 @@
             <p id="msg" class="text-2xl text-orange-300 font-bold px-4">ボタンを おしてね</p>
         </div>
         <div id="big-error" class="absolute inset-0 flex flex-col items-center justify-center bg-amber-50/90 hidden z-50 p-4 text-center">
-            <p class="text-red-500 font-bold text-xl mb-4">エラーがおきたよ</p>
-            <p id="error-detail" class="text-red-400 text-sm font-mono break-all max-w-xs"></p>
-            <button onclick="location.reload()" class="mt-8 bg-orange-400 text-white px-6 py-2 rounded-full font-bold">もういちど</button>
+            <p class="text-red-500 font-bold text-xl mb-2">エラーがおきたよ</p>
+            <p id="error-detail" class="text-red-400 text-[10px] font-mono break-all max-w-xs leading-tight"></p>
+            <button onclick="location.reload()" class="mt-6 bg-orange-400 text-white px-8 py-3 rounded-full font-bold shadow-lg">もういちど</button>
         </div>
     </div>
 
@@ -34,7 +34,7 @@
     </div>
 
     <script>
-        const GAS_URL = 'https://script.google.com/macros/s/AKfycbzj8UM_pMVEnL_cM3XAl3twX4ocBdHrklPfjmMUCCm-Po_D6ACv4j_ZFTXuAtmy1I9v/exec'; 
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbx84e1eMv__5e0AwcNroIf9mQVgKcWXK7xUXhT76rRcw4yOdAd4ugXz2EYLPVQjps7y/exec'; 
         
         const sounds = {
             start: new Audio('https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3'),
@@ -104,7 +104,7 @@
                     showError(data.error, data.debug);
                 }
             } catch (e) {
-                showError("通信エラー", e.message);
+                showError("つうしんエラー", "ネットがつながっていないかも？");
             }
         }
 
