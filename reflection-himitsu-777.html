@@ -3,16 +3,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>学びの足跡 v9.0</title>
+    <title>学びの足跡 v9.1</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { height: 100dvh; background-color: #fffbeb; margin: 0; display: flex; flex-direction: column; overflow: hidden; font-family: sans-serif; }
         .main-container { flex: 1; display: flex; flex-direction: column; padding: 1rem; gap: 0.8rem; min-height: 0; }
-        .tiles-grid { flex: 1; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1.2fr 1.2fr 0.8fr; gap: 0.8rem; min-height: 0; }
-        .tile-btn { background: white; border: 4px solid #ffedd5; border-radius: 2rem; padding: 1.2rem; display: flex; flex-direction: column; text-align: left; overflow: hidden; position: relative; transition: all 0.2s; }
-        .tile-btn:active { background: #fff7ed; transform: scale(0.98); }
-        .tile-preview { flex: 1; color: #4b5563; font-weight: 900; overflow: hidden; font-size: 1.4rem; line-height: 1.3; word-break: break-all; }
         
+        /* タイルグリッドの新しい定義 */
+        .tiles-grid { 
+            flex: 1; 
+            display: grid; 
+            grid-template-columns: 1fr 1fr; 
+            grid-template-rows: 0.6fr 1.2fr 0.6fr 0.8fr; /* めあてと次は低く、真ん中は高く */
+            gap: 0.8rem; 
+            min-height: 0; 
+        }
+        
+        .tile-btn { background: white; border: 4px solid #ffedd5; border-radius: 2rem; padding: 1rem; display: flex; flex-direction: column; text-align: left; overflow: hidden; position: relative; transition: all 0.2s; }
+        .tile-btn:active { background: #fff7ed; transform: scale(0.98); }
+        .tile-preview { flex: 1; color: #4b5563; font-weight: 900; overflow: hidden; font-size: 1.3rem; line-height: 1.2; word-break: break-all; margin-top: 0.2rem; }
+        
+        /* 個別枠線の色設定 */
+        .border-blue { border-color: #bae6fd !important; } /* 薄い青 */
+        .border-green { border-color: #d9f99d !important; } /* 薄い緑 */
+        .border-orange { border-color: #ffedd5 !important; } /* 標準の薄いオレンジ */
+
         #authOverlay { position: fixed; inset: 0; background-color: #fb923c; z-index: 1000000; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 2rem; }
         #authOverlay.active { display: flex; }
         .auth-card { background: white; border-radius: 3rem; padding: 2.5rem; width: 100%; max-width: 26rem; text-align: center; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
@@ -26,18 +41,13 @@
         .modal-bg.active { display: flex; }
         .modal-content { background: white; border-radius: 3rem; padding: 2rem; width: 100%; max-width: 32rem; border: 8px solid #ffedd5; position: relative; max-height: 90vh; overflow-y: auto; }
         
-        /* 履歴カード：5タイル形式 */
         .history-card { background: white; border: 8px solid #ffedd5; border-radius: 3rem; padding: 1.5rem; margin-bottom: 2rem; position: relative; }
         .mini-tiles-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-top: 1rem; }
         .mini-tile { background: #fffaf0; border: 2px solid #ffedd5; border-radius: 1.2rem; padding: 0.8rem; min-height: 80px; position: relative; }
-        
-        .subject-grid, .grade-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
-        .subject-btn, .grade-btn { background-color: #fb923c; color: white; padding: 1.2rem; border-radius: 1.5rem; font-weight: 900; font-size: 1.2rem; box-shadow: 0 4px 0 #ea580c; text-align: center; }
-        .grade-btn { background-color: #0ea5e9; box-shadow: 0 4px 0 #0284c7; }
+        .mini-tile-full { grid-column: span 2; min-height: 60px; }
 
         input { border: 4px solid #fed7aa; border-radius: 1.5rem; padding: 1rem; width: 100%; font-size: 1.5rem; font-weight: 900; text-align: center; outline: none; margin-bottom: 1rem; }
         .badge { position: absolute; bottom: 0.5rem; right: 0.5rem; font-size: 2.8rem; pointer-events: none; }
-        .mini-badge { position: absolute; bottom: 0.2rem; right: 0.2rem; font-size: 1.5rem; }
         
         #richDisplay { 
             flex: 1; background: white; border: 4px solid #ffedd5; border-radius: 2.5rem; 
@@ -55,6 +65,10 @@
         .mic-recording { animation: mic-pulse 1.5s infinite; background-color: #ef4444 !important; border-bottom: 8px solid #b91c1c !important; }
         @keyframes mic-pulse { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 70% { box-shadow: 0 0 0 20px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
         @keyframes pop-bounce { 0% { transform: scale(0); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+        
+        .subject-grid, .grade-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
+        .subject-btn, .grade-btn { background-color: #fb923c; color: white; padding: 1.2rem; border-radius: 1.5rem; font-weight: 900; font-size: 1.2rem; box-shadow: 0 4px 0 #ea580c; text-align: center; }
+        .grade-btn { background-color: #0ea5e9; box-shadow: 0 4px 0 #0284c7; }
     </style>
 
     <script>
@@ -65,7 +79,7 @@
 
         const KANJI_LISTS = {
             1: "一右雨円王音下火花貝学気九休玉金空月犬見五口校左三山子四糸字耳七車手十出女小上森人水正生青夕石赤千川先早草足村大男竹中虫町天田土二日入年白八百文木本名目立力林六",
-            2: "引羽雲園遠何科夏家歌画回会海絵外角楽活間丸岩顔汽記帰弓牛魚京強教近兄形計元言原戸古午後語工公広交光考行高黄合谷国黒今才細作算止市矢姉思紙寺自時室社弱首秋週春書少場色食心新親図数西声星晴切雪船線前組走多太体台地池知茶昼長鳥朝直通弟店点電刀冬当東答頭同道読内南肉馬売買麦半番父風分聞米歩母方北毎妹万明鳴毛門夜野友用曜来里理話",
+            2: "引羽雲園遠何科夏家歌画回会海絵外角楽活間丸岩顔汽记帰弓牛魚京強教近兄形計元言原戸古午後語工公広交光考行高黄合谷国黒今才細作算止市矢姉思紙寺自時室社弱首秋週春書少場色食心新親図数西声星晴切雪船線前組走多太体台地池知茶昼長鳥朝直通弟店点電刀冬当東答頭同道読内南肉馬売買麦半番父風分聞米歩母方北毎妹万明鳴毛門夜野友用曜来里理話",
             3: "悪安暗医委意育員院飲運泳駅央横屋温化荷界開階寒感漢館岸起期客究急級宮球去橋業曲局銀区苦具君係軽血決研県庫湖向幸港号根祭皿仕死使始指歯詩次事持式実写者主守取酒受州拾終習集住重宿所暑助昭消商章勝乗植申身神真深進世整昔全相送想息速族他打対待代第題炭短談着注柱丁帳調追定庭笛鉄転都度投豆島湯登等動童農波配倍箱畑発反坂板皮悲美鼻筆氷表秒病品負部服福物平返勉放味命面問役薬由油有遊予羊洋葉陽様落流旅両緑礼列練路和",
             4: "愛案以衣位茨印英栄媛塩岡億加果貨課芽賀改械害街各覚潟完官管関観願岐希旗器機議求泣給挙漁共協鏡競極熊訓軍郡群径景芸欠結建健験固功好香候康佐差菜最埼材崎昨札刷察参産散残氏司試児治滋辞鹿失借種周祝順初松笑唱焼照城縄臣信井成省清静席積折節説浅戦選然争倉巣束側続卒孫帯隊達単置仲沖兆低底的な典伝徒努灯働特徳栃木奈梨熱念敗梅博阪飯飛必票標不夫付府阜富副兵別辺変便包法望牧末満未民無約勇要養浴利陸良料量輪類令冷例連老労録",
             5: "圧囲移因永営衛易益液演応往桜可仮価河過快解格確額刊幹慣眼紀基寄規喜技義逆久旧救居許境均禁句型経潔件険検限現減故個護効厚耕航鉱構興講告混査再災妻採際在財罪殺雑酸賛士支史志枝師資飼示似識質舎謝授修述術準序招証象賞条状常表情織職制性政勢精製税責績接設絶祖素総造像増則測属率損貸態団断築貯張停提程適統堂銅導得毒独任燃能破犯判版比肥非費備評貧布婦武復複仏粉編弁保墓報豊防貿暴脈務夢迷綿輸余容略留領歴",
@@ -75,9 +89,13 @@
         const UI_TEXTS = {
             "記録": "きろく", "設定": "せってい", "学びの足跡": "まなびのあしあと", "全部けす": "ぜんぶけす", "全部消す": "ぜんぶけす",
             "話す": "はなす", "決定": "けってい", "やめる": "やめる", "1字消す": "1じけす", "保存しました！": "ほぞんしました！",
-            "どの きょうか？": "どの きょうか？", "①めあて": "①めあて", "②できたこと": "②できたこと", "③むずかしかった": "③むずかしかった", "④つぎのこと": "④つぎのこと", "しゃしん": "しゃしん",
+            "どの きょうか？": "どの きょうか？", "しゃしん": "しゃしん", "とじる": "とじる",
+            "今日のめあて": "きょうのめあて",
+            "できたこと、うまくいったこと": "できたこと、うまくいったこと",
+            "むずかしかったこと、うまくいかなかったこと": "むずかしかったこと、うまくいかなかったこと",
+            "つぎのこと": "つぎのこと",
             "ぜんぶ ほぞんする 💎": "ぜんぶ ほぞんする 💎", "なおして ほぞんする 💎": "なおして ほぞんする 💎",
-            "なおす": "なおす", "きろくをみる": "きろくをみる", "もうすぐだよ！": "もうすぐだよ！", "とじる": "とじる",
+            "なおす": "なおす", "きろくをみる": "きろくをみる", "もうすぐだよ！": "もうすぐだよ！",
             "どの 学年？": "どの がくねん？", "ひらがな": "ひらがな", "1年生": "1ねんせい", "2年生": "2ねんせい", "3年生": "3ねんせい",
             "4年生": "4ねんせい", "5年生": "5ねんせい", "6年生": "6ねんせい", "かんじ全部": "かんじぜんぶ",
             "記録から消す": "きろくからけす"
@@ -139,7 +157,6 @@
             document.getElementById('historyBtnLabel').innerText = convertUI("記録をみる", lv);
             document.getElementById('loadingText').innerText = convertUI("もうすぐだよ！", lv);
             
-            // 保存ボタンのラベル切り替え
             let saveLabelKey = appState.editingId ? "なおして ほぞんする 💎" : "ぜんぶ ほぞんする 💎";
             if (appState.isDeleteMode) saveLabelKey = "記録から消す";
             document.getElementById('saveBtnLabel').innerText = convertUI(saveLabelKey, lv);
@@ -147,21 +164,13 @@
 
         function checkAuth() {
             var auth = localStorage.getItem(AUTH_KEY);
-            if (!auth) { 
-                document.getElementById('authOverlay').classList.add('active'); 
-                document.getElementById('registrationForm').style.display = "block"; 
-            } else { 
-                appState.user = JSON.parse(auth); 
-                document.getElementById('authOverlay').classList.add('active'); 
-                document.getElementById('loginForm').style.display = "block"; 
-                document.getElementById('loginMsg').innerText = appState.user.class + " " + appState.user.no + "番の パスワードを いれてね"; 
-            }
+            if (!auth) { document.getElementById('authOverlay').classList.add('active'); document.getElementById('registrationForm').style.display = "block"; }
+            else { appState.user = JSON.parse(auth); document.getElementById('authOverlay').classList.add('active'); document.getElementById('loginForm').style.display = "block"; document.getElementById('loginMsg').innerText = appState.user.class + " " + appState.user.no + "番の パスワードを いれてね"; }
         }
         function login() { if (document.getElementById('loginPass').value === appState.user.pass) document.getElementById('authOverlay').classList.remove('active'); else alert("パスワードが ちがうよ！"); }
         function register() { var c = document.getElementById('regClass').value; var n = document.getElementById('regNo').value; var p = document.getElementById('regPass').value; if(!c || !n || !p) return alert("ぜんぶ いれてね！"); appState.user = { class: c, no: n, pass: p }; localStorage.setItem(AUTH_KEY, JSON.stringify(appState.user)); document.getElementById('authOverlay').classList.remove('active'); refreshMainView(); }
         function changeGrade(val) { appState.gradeMode = parseInt(val); refreshMainView(); }
 
-        // --- 音声認識 ---
         var SpeechRecognition = window.webkitSpeechRecognition || window.SpeechRecognition;
         var rec = SpeechRecognition ? new SpeechRecognition() : null;
         var isRec = false;
@@ -170,21 +179,8 @@
         if(rec) {
             rec.lang = 'ja-JP'; rec.interimResults = true; rec.continuous = true;
             rec.onstart = function() { isRec = true; lastInterim = ""; document.getElementById('micBtn').classList.add('mic-recording'); document.getElementById('micLabel').innerText = convertUI("やめる", appState.gradeMode); };
-            rec.onend = function() { 
-                isRec = false; 
-                document.getElementById('micBtn').classList.remove('mic-recording');
-                document.getElementById('micLabel').innerText = convertUI("話す", appState.gradeMode); 
-                if(lastInterim.trim() !== "") sendToGas(lastInterim);
-                lastInterim = "";
-            };
-            rec.onresult = function(e) { 
-                let interim = "";
-                for(var i=e.resultIndex; i<e.results.length; i++) {
-                    if(e.results[i].isFinal) sendToGas(e.results[i][0].transcript);
-                    else interim += e.results[i][0].transcript;
-                }
-                lastInterim = interim;
-            };
+            rec.onend = function() { isRec = false; document.getElementById('micBtn').classList.remove('mic-recording'); document.getElementById('micLabel').innerText = convertUI("話す", appState.gradeMode); if(lastInterim.trim() !== "") sendToGas(lastInterim); lastInterim = ""; };
+            rec.onresult = function(e) { let interim = ""; for(var i=e.resultIndex; i<e.results.length; i++) { if(e.results[i].isFinal) sendToGas(e.results[i][0].transcript); else interim += e.results[i][0].transcript; } lastInterim = interim; };
         }
 
         async function sendToGas(text) {
@@ -194,9 +190,8 @@
                 var res = await fetch(GAS_URL + '?text=' + encodeURIComponent(text));
                 var d = await res.json();
                 if(d.words_all) {
-                    // カーソル位置などへの挿入ではなく末尾に追加（簡易化）
                     appState.tiles[appState.activeId] = appState.tiles[appState.activeId].concat(d.words_all);
-                    appState.isDeleteMode = false; // 文字が入ったら削除モード解除
+                    appState.isDeleteMode = false;
                     document.getElementById('saveBtnContainer').style.backgroundColor = appState.editingId ? "#38bdf8" : "#fb923c";
                     renderEditorDisplay();
                 }
@@ -227,7 +222,7 @@
             document.getElementById('mainContentArea').style.display = "none";
             document.getElementById('headerArea').style.display = "none";
             document.getElementById('editorOverlay').classList.add('active');
-            const titles = {t1:'①めあて', t2:'②できたこと', t3:'③むずかしかった', t4:'④つぎのこと'};
+            const titles = {t1:'今日のめあて', t2:'できたこと、うまくいったこと', t3:'むずかしかったこと、うまくいかなかったこと', t4:'つぎのこと'};
             document.getElementById('editorTitle').innerText = convertUI(titles[id], appState.gradeMode);
             renderEditorDisplay();
             setTimeout(() => document.getElementById('richDisplay').focus(), 100);
@@ -237,10 +232,7 @@
             if(save) {
                 const plainText = document.getElementById('richDisplay').innerText;
                 appState.tiles[appState.activeId] = plainText.trim() === "" ? [] : [{surface: plainText, furigana: ""}];
-                if(plainText.trim() !== "") {
-                    appState.isDeleteMode = false;
-                    document.getElementById('saveBtnContainer').style.backgroundColor = appState.editingId ? "#38bdf8" : "#fb923c";
-                }
+                if(plainText.trim() !== "") { appState.isDeleteMode = false; document.getElementById('saveBtnContainer').style.backgroundColor = appState.editingId ? "#38bdf8" : "#fb923c"; }
             }
             document.getElementById('editorOverlay').classList.remove('active');
             document.getElementById('mainContentArea').style.display = "flex";
@@ -251,15 +243,10 @@
             refreshMainView();
         }
 
-        function deleteOneChar() { 
-            const el = document.getElementById('richDisplay');
-            el.focus();
-            document.execCommand('delete', false, null);
-        }
+        function deleteOneChar() { const el = document.getElementById('richDisplay'); el.focus(); document.execCommand('delete', false, null); }
 
-        // --- 保存・削除システム ---
         function startSaveProcess() {
-            if (appState.isDeleteMode) { if(confirm("この きろくを 消しますか？")) executeDeletion(); return; }
+            if (appState.isDeleteMode) { if(confirm("消しますか？")) executeDeletion(); return; }
             let hasContent = false;
             ['t1','t2','t3','t4'].forEach(k => { if(appState.tiles[k] && appState.tiles[k].length > 0) hasContent = true; });
             if (appState.tiles.photos.length > 0) hasContent = true;
@@ -271,10 +258,7 @@
             const h = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
             if(appState.editingId) { 
                 const idx = h.findIndex(x => x.id === appState.editingId); 
-                if(idx !== -1) {
-                    h[idx].fullData = JSON.parse(JSON.stringify(appState.tiles));
-                    h[idx].badges = JSON.parse(JSON.stringify(appState.badges));
-                }
+                if(idx !== -1) { h[idx].fullData = JSON.parse(JSON.stringify(appState.tiles)); h[idx].badges = JSON.parse(JSON.stringify(appState.badges)); }
             } else {
                 const entry = { id: Date.now(), date: new Date().toLocaleString('ja-JP'), subject: subject || "国語", fullData: JSON.parse(JSON.stringify(appState.tiles)), badges: JSON.parse(JSON.stringify(appState.badges)), user: appState.user };
                 h.unshift(entry);
@@ -285,92 +269,41 @@
             closeModal('subjectModal');
         }
 
-        function executeDeletion() {
-            const h = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-            const newH = h.filter(x => x.id !== appState.editingId);
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(newH));
-            alert("消しました！");
-            resetAll(true);
-        }
+        function executeDeletion() { const h = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); const newH = h.filter(x => x.id !== appState.editingId); localStorage.setItem(STORAGE_KEY, JSON.stringify(newH)); alert("消しました！"); resetAll(true); }
 
         function resetAll(silent) {
             if(silent || confirm("ぜんぶ消しますか？")) {
                 appState.tiles = { t1: [], t2: [], t3: [], t4: [], photos: [] };
                 appState.badges = { t1: "", t2: "", t3: "", t4: "" };
-                if (appState.editingId && silent !== true) {
-                    // 履歴修正中なら削除モードへ
-                    appState.isDeleteMode = true;
-                    document.getElementById('saveBtnContainer').style.backgroundColor = "#ef4444";
-                } else {
-                    appState.editingId = null;
-                    appState.isDeleteMode = false;
-                    document.getElementById('saveBtnContainer').style.backgroundColor = "#fb923c";
-                }
+                if (appState.editingId && silent !== true) { appState.isDeleteMode = true; document.getElementById('saveBtnContainer').style.backgroundColor = "#ef4444"; } 
+                else { appState.editingId = null; appState.isDeleteMode = false; document.getElementById('saveBtnContainer').style.backgroundColor = "#fb923c"; }
                 refreshMainView();
             }
         }
 
         function openModal(id) {
             const lv = appState.gradeMode;
-            if(id === 'subjectModal') {
-                const grid = document.getElementById('subjectGrid');
-                grid.innerHTML = ALL_SUBJECTS.map(s => `<button onclick="executeFinalSave('${s}')" class="subject-btn">${convertUI(s, lv)}</button>`).join('');
-            }
-            if(id === 'settingsModal') {
-                const grid = document.getElementById('gradeGrid');
-                const grades = [
-                    {v:0, t:"ひらがな"}, {v:1, t:"1年生"}, {v:2, t:"2年生"}, {v:3, t:"3年生"},
-                    {v:4, t:"4年生"}, {v:5, t:"5年生"}, {v:6, t:"6年生"}, {v:99, t:"かんじ全部"}
-                ];
-                grid.innerHTML = grades.map(g => `<button onclick="changeGrade(${g.v}); closeModal('settingsModal')" class="grade-btn">${convertUI(g.t, lv)}</button>`).join('');
-            }
-            if(id === 'historySubjectModal') {
-                const grid = document.getElementById('historySubGrid');
-                grid.innerHTML = ALL_SUBJECTS.map(s => `<button onclick="renderHistoryList('${s}')" class="subject-btn">${convertUI(s, lv)}</button>`).join('');
-            }
+            if(id === 'subjectModal') { const grid = document.getElementById('subjectGrid'); grid.innerHTML = ALL_SUBJECTS.map(s => `<button onclick="executeFinalSave('${s}')" class="subject-btn">${convertUI(s, lv)}</button>`).join(''); }
+            if(id === 'settingsModal') { const grid = document.getElementById('gradeGrid'); const grades = [{v:0, t:"ひらがな"}, {v:1, t:"1年生"}, {v:2, t:"2年生"}, {v:3, t:"3年生"}, {v:4, t:"4年生"}, {v:5, t:"5年生"}, {v:6, t:"6年生"}, {v:99, t:"かんじ全部"}]; grid.innerHTML = grades.map(g => `<button onclick="changeGrade(${g.v}); closeModal('settingsModal')" class="grade-btn">${convertUI(g.t, lv)}</button>`).join(''); }
+            if(id === 'historySubjectModal') { const grid = document.getElementById('historySubGrid'); grid.innerHTML = ALL_SUBJECTS.map(s => `<button onclick="renderHistoryList('${s}')" class="subject-btn">${convertUI(s, lv)}</button>`).join(''); }
             document.getElementById(id).classList.add('active');
         }
 
         function closeModal(id) { document.getElementById(id).classList.remove('active'); }
 
-        // --- 履歴表示（5タイル形式） ---
         function renderHistoryList(subject) {
             const lv = appState.gradeMode;
             const h = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]').filter(x => x.subject === subject);
             const list = document.getElementById('historyList');
             document.getElementById('historyTitle').innerText = convertUI(subject, lv) + "の きろく";
             list.innerHTML = h.length ? "" : "<p class='text-center mt-10 text-gray-400'>きろくがありません</p>";
-            
             h.forEach(item => {
                 const div = document.createElement('div');
                 div.className = "history-card";
                 const data = item.fullData;
                 const badges = item.badges || {};
-
-                const createMiniTile = (title, key) => `
-                    <div class="mini-tile">
-                        <div class="text-[10px] text-orange-400 font-bold">${convertUI(title, lv)}</div>
-                        <div class="text-xs font-black text-gray-700 mt-1">${(data[key]||[]).map(w=>convertWord(w, lv)).join('')}</div>
-                        <div class="mini-badge">${badges[key]||''}</div>
-                    </div>
-                `;
-
-                div.innerHTML = `
-                    <div class="flex justify-between items-center mb-2 px-2">
-                        <span class="bg-orange-400 text-white px-3 py-1 rounded-full text-xs font-bold">${convertUI(item.subject, lv)}</span>
-                        <span class="text-[10px] text-gray-400 font-bold">${item.date}</span>
-                    </div>
-                    <div class="mini-tiles-grid">
-                        ${createMiniTile('①めあて', 't1')}
-                        ${createMiniTile('②できたこと', 't2')}
-                        ${createMiniTile('③むずかしかった', 't3')}
-                        ${createMiniTile('④つぎのこと', 't4')}
-                    </div>
-                    <div class="mt-3 bg-white border-2 border-orange-100 rounded-xl p-1 flex gap-2 overflow-x-auto">
-                        ${(data.photos||[]).map(src => `<img src="${src}" class="h-14 w-14 object-cover rounded-lg" onclick="viewPhoto('${src}')">`).join('')}
-                    </div>
-                    <button onclick="loadToApp(${item.id}); closeModal('historyListModal');" class="w-full mt-4 bg-orange-400 text-white py-3 rounded-2xl font-black text-lg shadow-md active:scale-95">✎ ${convertUI('なおす', lv)}</button>
-                `;
+                const createMiniTile = (title, key, isFull) => `<div class="mini-tile ${isFull?'mini-tile-full':''}"><div class="text-[10px] text-orange-400 font-bold">${convertUI(title, lv)}</div><div class="text-xs font-black text-gray-700 mt-1">${(data[key]||[]).map(w=>convertWord(w, lv)).join('')}</div><div class="mini-badge">${badges[key]||''}</div></div>`;
+                div.innerHTML = `<div class="flex justify-between items-center mb-2 px-2"><span class="bg-orange-400 text-white px-3 py-1 rounded-full text-xs font-bold">${convertUI(item.subject, lv)}</span><span class="text-[10px] text-gray-400 font-bold">${item.date}</span></div><div class="mini-tiles-grid">${createMiniTile('今日のめあて', 't1', true)}${createMiniTile('できたこと', 't2', false)}${createMiniTile('むずかしかった', 't3', false)}${createMiniTile('つぎのこと', 't4', true)}</div><div class="mt-3 bg-white border-2 border-orange-100 rounded-xl p-1 flex gap-2 overflow-x-auto">${(data.photos||[]).map(src => `<img src="${src}" class="h-14 w-14 object-cover rounded-lg" onclick="viewPhoto('${src}')">`).join('')}</div><button onclick="loadToApp(${item.id}); closeModal('historyListModal');" class="w-full mt-4 bg-orange-400 text-white py-3 rounded-2xl font-black text-lg shadow-md">✎ ${convertUI('なおす', lv)}</button>`;
                 list.appendChild(div);
             });
             closeModal('historySubjectModal');
@@ -380,16 +313,16 @@
         function loadToApp(id) {
             const h = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
             const item = h.find(x => x.id === id);
-            if(item) {
-                appState.tiles = JSON.parse(JSON.stringify(item.fullData));
-                appState.badges = JSON.parse(JSON.stringify(item.badges || {}));
-                appState.editingId = id;
-                appState.isDeleteMode = false;
-                document.getElementById('saveBtnContainer').style.backgroundColor = "#38bdf8";
-                refreshMainView();
-            }
+            if(item) { appState.tiles = JSON.parse(JSON.stringify(item.fullData)); appState.badges = JSON.parse(JSON.stringify(item.badges || {})); appState.editingId = id; appState.isDeleteMode = false; document.getElementById('saveBtnContainer').style.backgroundColor = "#38bdf8"; refreshMainView(); }
         }
 
+        async function handlePhotos(input) {
+            const fs = Array.from(input.files);
+            if(appState.tiles.photos.length + fs.length > 2) return alert("写真は2枚までです");
+            for(let f of fs) { const src = await new Promise(r => { const rd = new FileReader(); rd.onload = e => r(e.target.result); rd.readAsDataURL(f); }); appState.tiles.photos.push(src); }
+            refreshMainView();
+            input.value = "";
+        }
         function deletePhoto(i) { if(confirm("消しますか？")) { appState.tiles.photos.splice(i,1); refreshMainView(); } }
         function viewPhoto(s) { document.getElementById('fullPhoto').src = s; openModal('photoViewerOverlay'); }
     </script>
@@ -422,12 +355,29 @@
 
     <div id="mainContentArea" class="main-container">
         <div class="tiles-grid">
-            <button class="tile-btn" onclick="openEditor('t1')"><div data-label="①めあて" class="text-orange-400 font-black text-xs"></div><div id="p-t1" class="tile-preview"></div><div id="badge-t1" class="badge" style="display:none;"></div></button>
-            <button class="tile-btn" onclick="openEditor('t2')"><div data-label="②できたこと" class="text-orange-400 font-black text-xs"></div><div id="p-t2" class="tile-preview"></div><div id="badge-t2" class="badge" style="display:none;"></div></button>
-            <button class="tile-btn" onclick="openEditor('t3')"><div data-label="③むずかしかった" class="text-orange-400 font-black text-xs"></div><div id="p-t3" class="tile-preview"></div><div id="badge-t3" class="badge" style="display:none;"></div></button>
-            <button class="tile-btn" onclick="openEditor('t4')"><div data-label="④つぎのこと" class="text-orange-400 font-black text-xs"></div><div id="p-t4" class="tile-preview"></div><div id="badge-t4" class="badge" style="display:none;"></div></button>
+            <button class="tile-btn col-span-2 border-blue" onclick="openEditor('t1')">
+                <div data-label="今日のめあて" class="text-sky-400 font-black text-xs"></div>
+                <div id="p-t1" class="tile-preview"></div>
+                <div id="badge-t1" class="badge" style="display:none;"></div>
+            </button>
+            <button class="tile-btn border-orange" onclick="openEditor('t2')">
+                <div data-label="できたこと、うまくいったこと" class="text-orange-400 font-black text-[10px] leading-tight"></div>
+                <div id="p-t2" class="tile-preview"></div>
+                <div id="badge-t2" class="badge" style="display:none;"></div>
+            </button>
+            <button class="tile-btn border-orange" onclick="openEditor('t3')">
+                <div data-label="むずかしかったこと、うまくいかなかったこと" class="text-orange-400 font-black text-[10px] leading-tight"></div>
+                <div id="p-t3" class="tile-preview"></div>
+                <div id="badge-t3" class="badge" style="display:none;"></div>
+            </button>
+            <button class="tile-btn col-span-2 border-green" onclick="openEditor('t4')">
+                <div data-label="つぎのこと" class="text-lime-500 font-black text-xs"></div>
+                <div id="p-t4" class="tile-preview"></div>
+                <div id="badge-t4" class="badge" style="display:none;"></div>
+            </button>
             <button class="tile-btn col-span-2" onclick="document.getElementById('fileInput').click()">
-                <div data-label="しゃしん" class="text-orange-400 font-black text-xs"></div><div id="photoLabelInner" class="absolute top-4 right-4 text-[10px] text-orange-300">0 / 2枚</div>
+                <div data-label="しゃしん" class="text-orange-400 font-black text-xs"></div>
+                <div id="photoLabelInner" class="absolute top-4 right-4 text-[10px] text-orange-300">0 / 2枚</div>
                 <div id="photoGrid" class="photo-grid-mini h-full"></div>
                 <input type="file" id="fileInput" accept="image/*" multiple style="display:none;" onchange="handlePhotos(this)">
             </button>
@@ -443,12 +393,12 @@
     <div id="editorOverlay">
         <div class="flex justify-between items-center mb-4 px-2 relative">
             <button onclick="closeEditor(false)" data-label="やめる" class="text-gray-400 font-black text-2xl p-2 active:scale-90 transition-all"></button>
-            <div id="editorTitle" class="absolute left-1/2 -translate-x-1/2 text-orange-400 font-black text-2xl italic"></div>
+            <div id="editorTitle" class="absolute left-1/2 -translate-x-1/2 text-orange-400 font-black text-xl italic text-center w-3/4"></div>
             <div class="w-20"></div> 
         </div>
         <div class="flex-1 relative flex flex-col min-h-0">
             <div id="loadingStatus" style="display:none;" class="absolute inset-0 bg-white/80 z-[6000] flex flex-col items-center justify-center rounded-[2.5rem]">
-                <div id="loadingText" class="text-3xl font-black text-orange-400 animate-bounce">もうすぐだよ！</div>
+                <div id="loadingText" class="text-3xl font-black text-orange-400 animate-bounce"></div>
             </div>
             <div id="richDisplay" contenteditable="true" spellcheck="false"></div>
         </div>
@@ -478,7 +428,7 @@
 
     <div id="historySubjectModal" class="modal-bg" onclick="if(event.target===this) closeModal('historySubjectModal')">
         <div class="modal-content text-center shadow-2xl">
-            <h2 data-label="どの きょうか？" class="text-2xl font-black text-orange-400 mb-6 italic">どの きょうか？</h2>
+            <h2 data-label="どの きょうか？" class="text-2xl font-black text-orange-400 mb-6 italic"></h2>
             <div id="historySubGrid" class="subject-grid"></div>
             <button onclick="closeModal('historySubjectModal')" data-label="やめる" class="text-gray-400 font-bold">やめる</button>
         </div>
