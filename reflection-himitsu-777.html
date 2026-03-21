@@ -3,29 +3,29 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>学びの足跡 v8.5</title>
+    <title>学びの足跡 v8.6</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { height: 100dvh; background-color: #fffbeb; margin: 0; display: flex; flex-direction: column; overflow: hidden; font-family: sans-serif; }
         .main-container { flex: 1; display: flex; flex-direction: column; padding: 1rem; gap: 0.8rem; min-height: 0; }
         .tiles-grid { flex: 1; display: grid; grid-template-columns: 1fr 1fr; grid-template-rows: 1.2fr 1.2fr 0.8fr; gap: 0.8rem; min-height: 0; }
-        .tile-btn { background: white; border: 4px solid #ffedd5; border-radius: 2rem; padding: 1.2rem; display: flex; flex-direction: column; text-align: left; overflow: hidden; position: relative; }
+        .tile-btn { background: white; border: 4px solid #ffedd5; border-radius: 2rem; padding: 1.2rem; display: flex; flex-direction: column; text-align: left; overflow: hidden; position: relative; transition: all 0.2s; }
         .tile-btn:active { background: #fff7ed; transform: scale(0.98); }
         .tile-preview { flex: 1; color: #4b5563; font-weight: 900; overflow: hidden; font-size: 1.4rem; line-height: 1.3; word-break: break-all; }
+        
         #authOverlay { position: fixed; inset: 0; background-color: #fb923c; z-index: 1000000; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 2rem; }
         #authOverlay.active { display: flex; }
-        .auth-card { background: white; border-radius: 3rem; padding: 2.5rem; width: 100%; max-width: 26rem; text-align: center; }
+        .auth-card { background: white; border-radius: 3rem; padding: 2.5rem; width: 100%; max-width: 26rem; text-align: center; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
         
-        /* 編集画面 */
         #editorOverlay { position: fixed; inset: 0; background-color: #fffbeb; z-index: 999999; display: none; flex-direction: column; padding: 1.2rem; }
         #editorOverlay.active { display: flex; }
         
-        /* 下部ボタンレイアウトのカスタマイズ */
+        /* エディタ下部ボタンレイアウト：ご要望通り「話す」を中央最大に */
         .editor-bottom-nav { 
             display: grid; 
             grid-template-columns: 0.7fr 0.7fr 1.8fr 1.2fr; 
             gap: 0.6rem; 
-            align-items: end; /* 下揃えで高さの違いを強調 */
+            align-items: end; 
             margin-top: 1.5rem;
         }
 
@@ -34,238 +34,417 @@
         .modal-content { background: white; border-radius: 3rem; padding: 2rem; width: 100%; max-width: 32rem; border: 8px solid #ffedd5; position: relative; }
         .subject-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
         .subject-btn { background-color: #fb923c; color: white; padding: 1.2rem; border-radius: 1.5rem; font-weight: 900; font-size: 1.5rem; box-shadow: 0 4px 0 #ea580c; text-align: center; }
+        
         input { border: 4px solid #fed7aa; border-radius: 1.5rem; padding: 1rem; width: 100%; font-size: 1.5rem; font-weight: 900; text-align: center; outline: none; margin-bottom: 1rem; }
         .badge { position: absolute; bottom: 0.5rem; right: 0.5rem; font-size: 2.8rem; pointer-events: none; animation: pop-bounce 0.6s forwards; }
         @keyframes pop-bounce { 0% { transform: scale(0); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
         
-        #richDisplay { flex: 1; background: white; border: 4px solid #ffedd5; border-radius: 2.5rem; padding: 2rem; font-size: 2.8rem; font-weight: 900; outline: none; overflow-y: auto; -webkit-user-select: text; }
+        #richDisplay { flex: 1; background: white; border: 4px solid #ffedd5; border-radius: 2.5rem; padding: 2rem; font-size: 2.8rem; font-weight: 900; outline: none; overflow-y: auto; color: #374151; line-height: 1.2; }
         .btn-active-state:active { opacity: 0.8; transform: scale(0.95); }
         
         .photo-grid-mini { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; height: 100%; }
         .photo-container { position: relative; background: white; border: 2px solid #ffedd5; border-radius: 1rem; overflow: hidden; height: 100%; }
         .photo-img-main { width: 100%; height: 100%; object-fit: cover; }
         .delete-btn { position: absolute; top: 4px; right: 4px; background: #ef4444; color: white; width: 24px; height: 24px; border-radius: 50%; font-weight: bold; border: 2px solid white; z-index: 50; display: flex; align-items: center; justify-content: center; }
+
+        .mic-recording { animation: mic-pulse 1.5s infinite; background-color: #ef4444 !important; border-bottom: 8px solid #b91c1c !important; }
+        @keyframes mic-pulse { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 70% { box-shadow: 0 0 0 20px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
     </style>
 
     <script>
-        var STORAGE_KEY = 'manabi_takara_history_v2';
-        var AUTH_KEY = 'manabi_auth_info';
-        var TEACHER_CODE = "702070";
-        var isBusy = false; 
+        const STORAGE_KEY = 'manabi_takara_history_v2';
+        const AUTH_KEY = 'manabi_auth_info';
+        const TEACHER_CODE = "702070";
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbxxE14tNshFIqZHwzhyGQtRDeSazD9aPex9Tm0gIGJjmUvd8jAiFN-bkQyNIt_D9cV_/exec';
 
-        var appState = { 
+        // 漢字リスト (1〜6年生配当漢字)
+        const KANJI_LISTS = {
+            1: "一右雨円王音下火花貝学気九休玉金空月犬見五口校左三山子四糸字耳七車手十出女小上森人水正生青夕石赤千川先早草足村大男竹中虫町天田土二日入年白八百文木本名目立力林六",
+            2: "引羽雲園遠何科夏家歌画回会海絵外角楽活間丸岩顔汽記帰弓牛魚京強教近兄形計元言原戸古午後語工公広交光考行高黄合谷国黒今才細作算止市矢姉思紙寺自時室社弱首秋週春書少場色食心新親図数西声星晴切雪船線前組走多太体台地池知茶昼長鳥朝直通弟店点電刀冬当東答頭同道読内南肉馬売買麦半番父風分聞米歩母方北毎妹万明鳴毛門夜野友用曜来里理話",
+            3: "悪安暗医委意育員院飲運泳駅央横屋温化荷界開階寒感漢館岸起期客究急級宮球去橋業曲局銀区苦具君係軽血決研県庫湖向幸港号根祭皿仕死使始指歯詩次事持式実写者主守取酒受州拾終習集住重宿所暑助昭消商章勝乗植申身神真深進世整昔全相送想息速族他打対待代第題炭短談着注柱丁帳調追定庭笛鉄転都度投豆島湯登等動童農波配倍箱畑発反坂板皮悲美鼻筆氷表秒病品負部服福物平返勉放味命面問役薬由油有遊予羊洋葉陽様落流旅両緑礼列練路和",
+            4: "愛案以衣位茨印英栄媛塩岡億加果貨課芽賀改械害街各覚潟完官管関観願岐希旗器機議求泣給挙漁共協鏡競極熊訓軍郡群径景芸欠結建健験固功好香候康佐差菜最埼材崎昨札刷察参産散残氏司試児治滋辞鹿失借種周祝順初松笑唱焼照城縄臣信井成省清静席積折節説浅戦選然争倉巣束側続卒孫帯隊達単置仲沖兆低底的な典伝徒努灯働特徳栃木奈梨熱念敗梅博阪飯飛必票標不夫付府阜富副兵別辺変便包法望牧末満未民無約勇要養浴利陸良料量輪類令冷例連老労録",
+            5: "圧囲移因永営衛易益液演応往桜可仮価河過快解格確額刊幹慣眼紀基寄規喜技義逆久旧救居許境均禁句型経潔件険検限現減故個護効厚耕航鉱構興講告混査再災妻採際在財罪殺雑酸賛士支史志枝師資飼示似識質舎謝授修述術準序招証象賞条状常表情織職制性政勢精製税責績接設絶祖素総造像増則測属率損貸態団断築貯張停提程適統堂銅導得毒独任燃能破犯判版比肥非費備評貧布婦武復複仏粉編弁保墓報豊防貿暴脈務夢迷綿輸余容略留領歴",
+            6: "胃異遺域宇映延沿順我灰拡革閣割株干巻看簡危机揮貴疑吸供胸郷勤筋系敬警劇激穴券絹権憲源厳己呼誤后孝皇紅降鋼刻穀骨困砂座済裁策冊蚕至私姿視詞誌磁射捨尺若樹収宗就衆従縦縮熟純処署諸除承将傷障蒸針仁垂推寸盛聖誠舌宣専泉洗染銭善奏窓創装層操蔵臓存尊退宅担探誕段暖値宙忠著庁頂腸潮賃痛敵展討党糖届難乳認納脳派拝背肺俳班晩否批秘俵腹奮並陛閉片補暮宝訪亡忘棒枚幕密盟模訳郵優預幼欲翌乱卵覧裏律臨朗論"
+        };
+
+        // UI表示用の単語リスト（漢字レベルに合わせて変換）
+        const UI_WORDS = {
+            "学びの足跡": "まなびのあしあと", "記録をみる": "きろくをみる", "設定": "せってい", "全部けす": "ぜんぶけす", "全部消す": "ぜんぶけす",
+            "話す": "はなす", "決定": "けってい", "やめる": "やめる", "1字消す": "1じけす", "保存しました！": "ほぞんしました！",
+            "どの きょうか？": "どの きょうか？", "①めあて": "①めあて", "②できたこと": "②できたこと", "③むずかしかった": "③むずかしかった", "④つぎのこと": "④つぎのこと", "しゃしん": "しゃしん",
+            "ぜんぶ ほぞんする 💎": "ぜんぶ ほぞんする 💎", "なおして ほぞんする 💎": "なおして ほぞんする 💎"
+        };
+
+        let appState = { 
             activeId: "", 
             tiles: { t1: [], t2: [], t3: [], t4: [], photos: [] },
             badges: { t1: "", t2: "", t3: "", t4: "" },
-            editingId: null, user: null, isDeleteMode: false 
+            editingId: null, user: null, isDeleteMode: false,
+            gradeMode: 1 // デフォルト1年生モード
         };
-        var ALL_SUBJECTS = ["国語", "算数", "生活", "理科", "社会", "音楽", "図工", "体育", "道徳", "外国語"];
-        var EMOJI_LIST = ["🌸", "⭐", "🦖", "🚀", "🦄", "👑", "💎", "🎈", "🦁", "🐬", "🍭", "🎨", "⚽", "🌈", "✨", "🐳", "🐱", "🐶", "🐰", "🐼", "🐯", "🥇", "🏆", "🎁", "🍦", "🍓", "🍎", "🐨", "🐧", "🐝", "🍀", "🌻", "☀️", "🌙", "❄️", "🔥", "🛸", "🎮", "🎸", "🏀", "🪄", "🐉", "🧸", "🎀", "🍬", "⚡", "🏎️", "🦅", "💰"];
+
+        const ALL_SUBJECTS = ["国語", "算数", "生活", "理科", "社会", "音楽", "図工", "体育", "道徳", "外国語"];
+        const EMOJI_LIST = ["🌸", "⭐", "🦖", "🚀", "🦄", "👑", "💎", "🎈", "🦁", "🐬", "🍭", "🎨", "⚽", "🌈", "✨", "🐶", "🐰", "🐼", "🐯"];
 
         window.onload = function() { checkAuth(); refreshMainView(); };
 
+        // --- 漢字表示ロジック ---
+        function isKanji(ch) { return (ch >= '\u4e00' && ch <= '\u9faf'); }
+        function getAllowedKanji(lv) {
+            if (lv === 0) return "";
+            if (lv === 99) return "ALL";
+            let list = ""; for (let i = 1; i <= lv; i++) list += KANJI_LISTS[i] || ""; return list;
+        }
+
+        function convertUI(text, lv) {
+            if (lv === 99) return text;
+            let result = text;
+            const allowed = getAllowedKanji(lv);
+            for (let [kanji, hira] of Object.entries(UI_WORDS)) {
+                if (result.includes(kanji)) {
+                    let canKeep = true;
+                    if (allowed === "") canKeep = false;
+                    else { for (let char of kanji) { if (isKanji(char) && !allowed.includes(char)) canKeep = false; } }
+                    if (!canKeep) result = result.split(kanji).join(hira);
+                }
+            }
+            return result;
+        }
+
+        function convertWord(word, lv) {
+            if (lv === 99) return word.surface;
+            if (lv === 0) return word.furigana || word.surface;
+            const allowed = getAllowedKanji(lv);
+            for (let char of word.surface) {
+                if (isKanji(char) && !allowed.includes(char)) return word.furigana || word.surface;
+            }
+            return word.surface;
+        }
+
+        function updateLabels() {
+            const lv = appState.gradeMode;
+            document.querySelectorAll('[data-label]').forEach(el => {
+                const key = el.getAttribute('data-label');
+                el.innerText = convertUI(key, lv);
+            });
+            document.getElementById('appTitle').innerText = convertUI("学びの足跡", lv);
+            document.getElementById('historyBtnLabel').innerText = convertUI("記録をみる", lv);
+            const saveText = appState.editingId ? "なおして ほぞんする 💎" : "ぜんぶ ほぞんする 💎";
+            document.getElementById('saveBtnLabel').innerText = convertUI(saveText, lv);
+        }
+
+        // --- 認証 ---
         function checkAuth() {
             var auth = localStorage.getItem(AUTH_KEY);
             if (!auth) { 
                 document.getElementById('authOverlay').classList.add('active'); 
                 document.getElementById('registrationForm').style.display = "block"; 
-                document.getElementById('loginForm').style.display = "none";
             } else { 
                 appState.user = JSON.parse(auth); 
                 document.getElementById('authOverlay').classList.add('active'); 
-                document.getElementById('registrationForm').style.display = "none"; 
                 document.getElementById('loginForm').style.display = "block"; 
                 document.getElementById('loginMsg').innerText = appState.user.class + " " + appState.user.no + "番の パスワードを いれてね"; 
             }
         }
         function login() { if (document.getElementById('loginPass').value === appState.user.pass) document.getElementById('authOverlay').classList.remove('active'); else alert("パスワードが ちがうよ！"); }
-        function register() { var c = document.getElementById('regClass').value; var n = document.getElementById('regNo').value; var p = document.getElementById('regPass').value; if(!c || !n || !p) return alert("ぜんぶ いれてね！"); appState.user = { class: c, no: n, pass: p }; localStorage.setItem(AUTH_KEY, JSON.stringify(appState.user)); document.getElementById('authOverlay').classList.remove('active'); updateUserDisplay(); }
-        function executeReset() { if (document.getElementById('teacherCodeInput').value === TEACHER_CODE) { if (confirm("やりなおしますか？")) { localStorage.removeItem(AUTH_KEY); location.reload(); } } else alert("ばんごうが ちがいます"); }
-        function updateUserDisplay() { if(appState.user) document.getElementById('displayUser').innerText = appState.user.class + " " + appState.user.no + "番"; }
+        function register() { var c = document.getElementById('regClass').value; var n = document.getElementById('regNo').value; var p = document.getElementById('regPass').value; if(!c || !n || !p) return alert("ぜんぶ いれてね！"); appState.user = { class: c, no: n, pass: p }; localStorage.setItem(AUTH_KEY, JSON.stringify(appState.user)); document.getElementById('authOverlay').classList.remove('active'); refreshMainView(); }
+        function changeGrade(val) { appState.gradeMode = parseInt(val); refreshMainView(); }
 
         // --- 音声入力 ---
         var SpeechRecognition = window.webkitSpeechRecognition || window.SpeechRecognition;
         var rec = SpeechRecognition ? new SpeechRecognition() : null;
         var isRec = false;
-        var lastInterimText = "";
 
         if(rec) {
             rec.lang = 'ja-JP'; rec.interimResults = true;
-            rec.onstart = function() { isRec = true; lastInterimText = ""; document.getElementById('micBtn').classList.replace('bg-sky-500', 'bg-red-500'); document.getElementById('micLabel').innerText = "やめる"; };
-            rec.onend = function() { isRec = false; document.getElementById('micBtn').classList.replace('bg-red-500', 'bg-sky-500'); document.getElementById('micLabel').innerText = "話す"; if (lastInterimText.trim() !== "") { sendToGas(lastInterimText); lastInterimText = ""; } };
-            rec.onresult = function(e) { var interim = ""; for(var i=e.resultIndex; i<e.results.length; i++){ if(e.results[i].isFinal) sendToGas(e.results[i][0].transcript); else interim += e.results[i][0].transcript; } lastInterimText = interim; };
-        }
-
-        function handleMicAction() {
-            if (isBusy) return; isBusy = true; setTimeout(() => isBusy = false, 600);
-            if(!rec) return alert("マイクが つかえません");
-            document.getElementById('richDisplay').focus();
-            try { if (isRec) rec.stop(); else rec.start(); } catch(e) { rec.stop(); }
-        }
-
-        function insertTextAtCursor(text) {
-            var sel = window.getSelection();
-            if (sel.getRangeAt && sel.rangeCount) {
-                var range = sel.getRangeAt(0);
-                range.deleteContents();
-                var textNode = document.createTextNode(text);
-                range.insertNode(textNode);
-                range.setStartAfter(textNode);
-                range.setEndAfter(textNode);
-                sel.removeAllRanges();
-                sel.addRange(range);
-            } else {
-                document.getElementById('richDisplay').innerText += text;
-            }
+            rec.onstart = function() { 
+                isRec = true; 
+                document.getElementById('micBtn').classList.add('mic-recording');
+                document.getElementById('micLabel').innerText = convertUI("やめる", appState.gradeMode); 
+            };
+            rec.onend = function() { 
+                isRec = false; 
+                document.getElementById('micBtn').classList.remove('mic-recording');
+                document.getElementById('micLabel').innerText = convertUI("話す", appState.gradeMode); 
+            };
+            rec.onresult = function(e) { for(var i=e.resultIndex; i<e.results.length; i++) if(e.results[i].isFinal) sendToGas(e.results[i][0].transcript); };
         }
 
         async function sendToGas(text) {
-            if(!text || !text.trim()) return;
+            if(!text.trim()) return;
             document.getElementById('loadingStatus').style.display = "flex";
             try {
-                var res = await fetch('https://script.google.com/macros/s/AKfycbxxE14tNshFIqZHwzhyGQtRDeSazD9aPex9Tm0gIGJjmUvd8jAiFN-bkQyNIt_D9cV_/exec?text=' + encodeURIComponent(text));
+                var res = await fetch(GAS_URL + '?text=' + encodeURIComponent(text));
                 var d = await res.json();
                 if(d.words_all) {
-                    var plainText = d.words_all.map(w => w.surface).join('');
-                    insertTextAtCursor(plainText);
+                    appState.tiles[appState.activeId] = appState.tiles[appState.activeId].concat(d.words_all);
+                    renderEditorDisplay();
                 }
             } catch(e){} finally { document.getElementById('loadingStatus').style.display = "none"; }
         }
 
-        // --- 編集画面の操作 ---
+        function handleMicAction() { if(!rec) return alert("マイクが つかえません"); try { if (isRec) rec.stop(); else rec.start(); } catch(e) { rec.stop(); } }
+
+        // --- 画面描画 ---
+        function refreshMainView() {
+            updateLabels();
+            ['t1','t2','t3','t4'].forEach(id => {
+                const words = appState.tiles[id] || [];
+                document.getElementById('p-'+id).innerText = words.map(w => convertWord(w, appState.gradeMode)).join('');
+                const b = document.getElementById('badge-'+id);
+                if(appState.badges[id] && words.length > 0) { b.innerText = appState.badges[id]; b.style.display = "block"; } else b.style.display = "none";
+            });
+            document.getElementById('photoGrid').innerHTML = appState.tiles.photos.map((src,idx) => `<div class="photo-container"><img src="${src}" class="photo-img-main" onclick="viewPhoto('${src}')"><button class="delete-btn" onclick="event.stopPropagation(); deletePhoto(${idx})">✖</button></div>`).join('');
+            document.getElementById('photoLabelInner').innerText = appState.tiles.photos.length + " / 2枚";
+        }
+
+        function renderEditorDisplay() {
+            const words = appState.tiles[appState.activeId] || [];
+            document.getElementById('richDisplay').innerText = words.map(w => convertWord(w, appState.gradeMode)).join('');
+        }
+
         function openEditor(id) {
             appState.activeId = id;
             document.getElementById('mainContentArea').style.display = "none";
             document.getElementById('headerArea').style.display = "none";
             document.getElementById('editorOverlay').classList.add('active');
-            document.getElementById('editorTitle').innerText = {t1:'①めあて', t2:'②できたこと', t3:'③むずかしかった', t4:'④つぎのこと'}[id];
-            var currentText = (appState.tiles[id] || []).map(w => w.surface).join('');
-            document.getElementById('richDisplay').innerText = currentText;
-            setTimeout(() => document.getElementById('richDisplay').focus(), 100);
+            const titles = {t1:'①めあて', t2:'②できたこと', t3:'③むずかしかった', t4:'④つぎのこと'};
+            document.getElementById('editorTitle').innerText = convertUI(titles[id], appState.gradeMode);
+            renderEditorDisplay();
         }
 
         function closeEditor(save) {
-            if(save) {
-                var newText = document.getElementById('richDisplay').innerText;
-                appState.tiles[appState.activeId] = [{surface: newText, furigana: ""}];
-                if(newText.length > 0 && !appState.badges[appState.activeId]) appState.badges[appState.activeId] = EMOJI_LIST[Math.floor(Math.random() * EMOJI_LIST.length)];
-                else if(!newText.length) appState.badges[appState.activeId] = "";
-                refreshMainView();
-            }
             document.getElementById('editorOverlay').classList.remove('active');
             document.getElementById('mainContentArea').style.display = "flex";
             document.getElementById('headerArea').style.display = "flex";
+            if(save && appState.tiles[appState.activeId].length > 0 && !appState.badges[appState.activeId]) {
+                appState.badges[appState.activeId] = EMOJI_LIST[Math.floor(Math.random() * EMOJI_LIST.length)];
+            }
+            refreshMainView();
         }
 
-        function deleteOneChar(event) { event.preventDefault(); document.getElementById('richDisplay').focus(); document.execCommand('delete', false, null); }
-        function clearInEditor() { if(confirm("ぜんぶ けしますか？")){ document.getElementById('richDisplay').innerText = ""; } }
+        function deleteOneChar() { 
+            const words = appState.tiles[appState.activeId];
+            if(words.length > 0) {
+                const last = words[words.length-1];
+                if(last.surface.length > 1) {
+                    last.surface = last.surface.slice(0, -1);
+                    last.furigana = ""; 
+                } else words.pop();
+            }
+            renderEditorDisplay();
+        }
 
-        // --- 保存・履歴 ---
         function startSaveProcess() {
-            if (appState.isDeleteMode) { if(confirm("この きろくを 消しますか？")) executeDeletion(); return; }
-            var hasContent = false;
-            ['t1','t2','t3','t4'].forEach(function(k){ if(appState.tiles[k] && appState.tiles[k].length > 0 && appState.tiles[k][0].surface !== "") hasContent = true; });
+            if (appState.isDeleteMode) { if(confirm("消しますか？")) executeDeletion(); return; }
+            let hasContent = false;
+            ['t1','t2','t3','t4'].forEach(k => { if(appState.tiles[k].length > 0) hasContent = true; });
             if (appState.tiles.photos.length > 0) hasContent = true;
-            if (!hasContent) return alert("まだ なにもありません");
+            if (!hasContent) return alert("まだ なにも ありません");
             if (appState.editingId) executeFinalSave(null); else openModal('subjectModal');
         }
-        function executeFinalSave(subjectName) { try { var h = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); var entry = { id: appState.editingId || Date.now(), date: new Date().toLocaleString('ja-JP'), subject: subjectName || "修正", fullData: JSON.parse(JSON.stringify(appState.tiles)), badges: JSON.parse(JSON.stringify(appState.badges)), user: appState.user }; if (appState.editingId) { var idx = h.findIndex(x => x.id === appState.editingId); if(idx !== -1) h[idx] = entry; } else h.unshift(entry); localStorage.setItem(STORAGE_KEY, JSON.stringify(h.slice(0, 10))); alert("保存しました！"); resetCurrentForm(true); closeModal('subjectModal'); } catch (e) { alert("エラー！"); } }
-        function executeDeletion() { var h = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); var newH = h.filter(x => x.id !== appState.editingId); localStorage.setItem(STORAGE_KEY, JSON.stringify(newH)); alert("消しました！"); resetCurrentForm(true); }
-        function resetCurrentForm(isSilent) { if (isSilent === true || confirm("ぜんぶ けしますか？")) { appState.tiles = { t1: [], t2: [], t3: [], t4: [], photos: [] }; appState.badges = { t1: "", t2: "", t3: "", t4: "" }; if (appState.editingId && isSilent !== true) { appState.isDeleteMode = true; document.getElementById('saveBtnLabel').innerText = "記録から消す"; document.getElementById('saveBtnContainer').style.backgroundColor = "#ef4444"; } else { appState.editingId = null; appState.isDeleteMode = false; document.getElementById('saveBtnLabel').innerText = "ぜんぶ ほぞんする 💎"; document.getElementById('saveBtnContainer').style.backgroundColor = "#fb923c"; } refreshMainView(); } }
-        function refreshMainView() { updateUserDisplay(); ['t1','t2','t3','t4'].forEach(id => { var txt = (appState.tiles[id]||[]).map(w=>w.surface).join(''); document.getElementById('p-'+id).innerText = txt; var b = document.getElementById('badge-'+id); if(appState.badges[id] && txt.length > 0) { b.innerText = appState.badges[id]; b.style.display = "block"; } else b.style.display = "none"; }); document.getElementById('photoGrid').innerHTML = appState.tiles.photos.map((src,idx) => `<div class="photo-container"><img src="${src}" class="photo-img-main" onclick="event.stopPropagation(); viewPhoto('${src}')"><button class="delete-btn" onclick="event.stopPropagation(); deletePhoto(${idx})">✖</button></div>`).join(''); document.getElementById('photoLabelInner').innerText = appState.tiles.photos.length + " / 2枚"; }
-        function renderSubjects() { document.getElementById('subjectGrid').innerHTML = ALL_SUBJECTS.map(s => `<button onclick="executeFinalSave('${s}')" class="subject-btn">${s}</button>`).join(''); }
-        function openModal(id) { if (id === 'subjectModal') renderSubjects(); if (id === 'historyModal') renderHistory(); document.getElementById(id).classList.add('active'); }
+
+        function executeFinalSave(subject) {
+            const h = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+            const entry = { 
+                id: appState.editingId || Date.now(), 
+                date: new Date().toLocaleString('ja-JP'), 
+                subject: subject || "修正", 
+                fullData: JSON.parse(JSON.stringify(appState.tiles)), 
+                badges: JSON.parse(JSON.stringify(appState.badges)), 
+                user: appState.user 
+            };
+            if(appState.editingId) { 
+                const idx = h.findIndex(x => x.id === appState.editingId); 
+                if(idx !== -1) h[idx] = entry; 
+            } else h.unshift(entry);
+            
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(h.slice(0, 10)));
+            alert(convertUI("保存しました！", appState.gradeMode));
+            resetAll(true);
+            closeModal('subjectModal');
+        }
+
+        function executeDeletion() {
+            const h = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+            const newH = h.filter(x => x.id !== appState.editingId);
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(newH));
+            alert("消しました！");
+            resetAll(true);
+        }
+
+        function resetAll(silent) {
+            if(silent || confirm("ぜんぶ けしますか？")) {
+                appState.tiles = { t1: [], t2: [], t3: [], t4: [], photos: [] };
+                appState.badges = { t1: "", t2: "", t3: "", t4: "" };
+                appState.editingId = null;
+                appState.isDeleteMode = false;
+                document.getElementById('saveBtnContainer').style.backgroundColor = "#fb923c";
+                refreshMainView();
+            }
+        }
+
+        function openModal(id) {
+            if(id === 'subjectModal') {
+                const grid = document.getElementById('subjectGrid');
+                grid.innerHTML = ALL_SUBJECTS.map(s => `<button onclick="executeFinalSave('${s}')" class="subject-btn">${convertUI(s, appState.gradeMode)}</button>`).join('');
+            }
+            if(id === 'historyModal') renderHistory();
+            document.getElementById(id).classList.add('active');
+        }
         function closeModal(id) { document.getElementById(id).classList.remove('active'); }
-        function deletePhoto(idx) { if(confirm("けしますか？")){ appState.tiles.photos.splice(idx, 1); refreshMainView(); } }
-        function viewPhoto(src) { document.getElementById('fullPhoto').src = src; document.getElementById('photoViewerOverlay').classList.add('active'); }
-        function closePhoto() { document.getElementById('photoViewerOverlay').classList.remove('active'); }
-        async function handlePhotos(input) { var fs = Array.from(input.files); if(appState.tiles.photos.length + fs.length > 2) { alert("2枚まで"); input.value = ""; return; } for(var i=0; i<fs.length; i++){ await new Promise(r => { var rd = new FileReader(); rd.onload = e => { var img = new Image(); img.onload = () => { var cv = document.createElement('canvas'); var m = 800; var w = img.width, h = img.height; if(w > h) { if(w > m){ h *= m/w; w = m; } } else { if(h > m){ w *= m/h; h = m; } } cv.width = w; cv.height = h; cv.getContext('2d').drawImage(img, 0, 0, w, h); appState.tiles.photos.push(cv.toDataURL('image/jpeg', 0.6)); refreshMainView(); r(); }; img.src = e.target.result; }; rd.readAsDataURL(fs[i]); }); } input.value = ""; }
-        function renderHistory() { var h = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); var list = document.getElementById('historyList'); document.getElementById('historyTitle').innerText = "🎁 どの きょうか？"; list.innerHTML = '<div class="grid grid-cols-2 gap-4">' + ALL_SUBJECTS.map(s => h.some(x=>x.subject===s) ? `<button onclick="viewHistorySubject('${s}')" class="bg-orange-400 text-white p-6 rounded-2xl font-black text-2xl shadow-md border-4 border-white">${s}</button>` : `<button class="bg-gray-100 text-gray-300 p-6 rounded-2xl font-black text-2xl border-4 border-dashed border-gray-200 opacity-60">${s}</button>`).join('') + '</div>'; }
-        function viewHistorySubject(s) { var h = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]').filter(x=>x.subject===s); var list = document.getElementById('historyList'); document.getElementById('historyTitle').innerText = "🎁 " + s + "の きろく"; var html = '<button onclick="renderHistory()" class="mb-6 text-orange-400 font-black text-xl">⬅️ もどる</button>'; h.forEach(x => { var b = x.badges || {}; html += `<div class="bg-white border-4 border-orange-100 p-6 rounded-[2.5rem] mb-6 shadow-sm"><div class="flex justify-between items-center mb-3 text-xs text-orange-300 font-black">${x.date}<button onclick="loadToApp(${x.id})" class="bg-sky-400 text-white px-6 py-2 rounded-full text-sm">✎なおす</button></div><div class="space-y-1 text-sm font-black text-gray-700">${['t1','t2','t3','t4'].map(function(k,i){return '<div class="flex justify-between border-b border-orange-50"><span>'+(i+1)+' '+(x.fullData[k]||[]).map(function(w){return w.surface;}).join('')+'</span><span class="text-xl">'+(b[k]||"")+'</span></div>';}).join('')}</div><div class="flex gap-2 mt-4">${(x.fullData.photos||[]).map(function(p){return '<img src="'+p+'" class="w-16 h-16 object-cover rounded-xl" onclick="viewPhoto(\''+p+'\')">';}).join('')}</div></div>`; }); list.innerHTML = html; }
-        function loadToApp(id) { var hStr = localStorage.getItem(STORAGE_KEY); if(!hStr) return; var history = JSON.parse(hStr); var h = history.find(x=>x.id===id); if(h) { appState.tiles = JSON.parse(JSON.stringify(h.fullData)); appState.badges = JSON.parse(JSON.stringify(h.badges || {})); appState.editingId = id; appState.isDeleteMode = false; refreshMainView(); closeModal('historyModal'); document.getElementById('saveBtnLabel').innerText = "なおして ほぞんする 💎"; document.getElementById('saveBtnContainer').style.backgroundColor = "#38bdf8"; } }
+
+        function renderHistory() {
+            const h = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+            const list = document.getElementById('historyList');
+            document.getElementById('historyTitle').innerText = convertUI("記録", appState.gradeMode);
+            list.innerHTML = h.length ? "" : "<p class='text-center mt-10 text-gray-400'>きろくが ありません</p>";
+            h.forEach(item => {
+                const div = document.createElement('div');
+                div.className = "bg-white border-4 border-orange-100 p-4 rounded-3xl mb-4 shadow-sm active:scale-95 transition-all";
+                div.innerHTML = `
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="bg-orange-400 text-white px-3 py-1 rounded-full text-xs font-bold">${convertUI(item.subject, appState.gradeMode)}</span>
+                        <span class="text-[10px] text-gray-400">${item.date}</span>
+                    </div>
+                    <div class="text-xs text-gray-600 line-clamp-1">${item.fullData.t1.map(w=>w.surface).join('')}</div>
+                    <button onclick="loadToApp(${item.id})" class="w-full mt-3 bg-sky-400 text-white py-2 rounded-xl text-sm font-bold">✎なおす</button>
+                `;
+                list.appendChild(div);
+            });
+        }
+
+        function loadToApp(id) {
+            const h = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+            const item = h.find(x => x.id === id);
+            if(item) {
+                appState.tiles = JSON.parse(JSON.stringify(item.fullData));
+                appState.badges = JSON.parse(JSON.stringify(item.badges || {}));
+                appState.editingId = id;
+                appState.isDeleteMode = false;
+                document.getElementById('saveBtnContainer').style.backgroundColor = "#38bdf8";
+                refreshMainView();
+                closeModal('historyModal');
+            }
+        }
+
+        async function handlePhotos(input) {
+            const fs = Array.from(input.files);
+            if(appState.tiles.photos.length + fs.length > 2) return alert("しゃしんは 2まい までです");
+            for(let f of fs) {
+                const src = await new Promise(r => { 
+                    const rd = new FileReader(); 
+                    rd.onload = e => r(e.target.result); 
+                    rd.readAsDataURL(f); 
+                });
+                appState.tiles.photos.push(src);
+            }
+            refreshMainView();
+            input.value = "";
+        }
+        function deletePhoto(i) { appState.tiles.photos.splice(i,1); refreshMainView(); }
+        function viewPhoto(s) { document.getElementById('fullPhoto').src = s; openModal('photoViewerOverlay'); }
     </script>
 </head>
 <body class="select-none">
 
     <div id="authOverlay">
         <div id="registrationForm" class="auth-card" style="display:none;">
-            <h2 class="text-3xl font-black text-orange-500 mb-6">はじめまして！</h2>
+            <h2 class="text-3xl font-black text-orange-500 mb-6 italic">はじめまして！</h2>
             <input type="text" id="regClass" placeholder="なに組？">
             <input type="number" id="regNo" placeholder="出席ばんごう">
             <input type="password" id="regPass" placeholder="パスワード">
             <button onclick="register()" class="w-full bg-orange-500 text-white py-6 rounded-2xl font-black text-2xl shadow-xl mt-4">はじめる！</button>
         </div>
         <div id="loginForm" class="auth-card" style="display:none;">
-            <h2 class="text-3xl font-black text-orange-500 mb-6">おかえり！</h2>
+            <h2 class="text-3xl font-black text-orange-500 mb-6 italic">おかえり！</h2>
             <p id="loginMsg" class="text-gray-500 font-bold mb-6 text-sm"></p>
             <input type="password" id="loginPass" placeholder="パスワード">
             <button onclick="login()" class="w-full bg-orange-500 text-white py-6 rounded-2xl font-black text-2xl shadow-xl mt-4">あける</button>
-            <button onclick="document.getElementById('loginForm').style.display='none';document.getElementById('resetForm').style.display='block';" class="mt-8 text-orange-300 font-bold text-sm underline">わすれてしまったら</button>
-        </div>
-        <div id="resetForm" class="auth-card" style="display:none;">
-            <h2 class="text-2xl font-black text-gray-700 mb-6">せんせいへ</h2>
-            <input type="password" id="teacherCodeInput" placeholder="あんしょうばんごう">
-            <button onclick="executeReset()" class="w-full bg-red-500 text-white py-6 rounded-2xl font-black text-xl mb-4">リセット</button>
-            <button onclick="document.getElementById('resetForm').style.display='none';document.getElementById('loginForm').style.display='block';" class="text-gray-400 font-bold">もどる</button>
         </div>
     </div>
 
     <div id="headerArea" class="px-4 pt-4 flex justify-between items-center shrink-0">
-        <button onclick="openModal('historyModal')" class="bg-white border-2 border-orange-200 rounded-full px-4 py-2 text-xs font-black text-orange-400 shadow-sm">🎁 きろくをみる</button>
-        <h1 class="text-xl font-black text-orange-400 tracking-tighter text-center flex-1">学びの足跡</h1>
-        <div id="displayUser" class="text-[10px] font-black bg-orange-100 text-orange-500 px-3 py-1 rounded-full border border-orange-200">設定</div>
+        <button onclick="openModal('historyModal')" class="bg-white border-2 border-orange-200 rounded-full px-4 py-2 shadow-sm active:scale-95 transition-all">
+            <span id="historyBtnLabel" class="text-xs font-black text-orange-400 italic">記録をみる</span>
+        </button>
+        <h1 id="appTitle" class="text-xl font-black text-orange-400 tracking-tighter text-center flex-1">学びの足跡</h1>
+        
+        <select onchange="changeGrade(this.value)" class="bg-orange-400 text-white font-black text-[10px] px-3 py-1 rounded-full border-2 border-white shadow-sm outline-none appearance-none">
+            <option value="0">ひらがな</option>
+            <option value="1" selected>1ねんせい</option>
+            <option value="2">2ねんせい</option>
+            <option value="3">3ねんせい</option>
+            <option value="4">4ねんせい</option>
+            <option value="5">5ねんせい</option>
+            <option value="6">6ねんせい</option>
+            <option value="99">かんじ全部</option>
+        </select>
     </div>
 
     <div id="mainContentArea" class="main-container">
         <div class="tiles-grid">
-            <button class="tile-btn" onclick="openEditor('t1')"><div class="text-orange-400 font-black text-xs">①めあて</div><div id="p-t1" class="tile-preview"></div><div id="badge-t1" class="badge" style="display:none;"></div></button>
-            <button class="tile-btn" onclick="openEditor('t2')"><div class="text-orange-400 font-black text-xs">②できたこと</div><div id="p-t2" class="tile-preview"></div><div id="badge-t2" class="badge" style="display:none;"></div></button>
-            <button class="tile-btn" onclick="openEditor('t3')"><div class="text-orange-400 font-black text-xs">③むずかしかった</div><div id="p-t3" class="tile-preview"></div><div id="badge-t3" class="badge" style="display:none;"></div></button>
-            <button class="tile-btn" onclick="openEditor('t4')"><div class="text-orange-400 font-black text-xs">④つぎのこと</div><div id="p-t4" class="tile-preview"></div><div id="badge-t4" class="badge" style="display:none;"></div></button>
+            <button class="tile-btn" onclick="openEditor('t1')"><div data-label="①めあて" class="text-orange-400 font-black text-xs"></div><div id="p-t1" class="tile-preview"></div><div id="badge-t1" class="badge" style="display:none;"></div></button>
+            <button class="tile-btn" onclick="openEditor('t2')"><div data-label="②できたこと" class="text-orange-400 font-black text-xs"></div><div id="p-t2" class="tile-preview"></div><div id="badge-t2" class="badge" style="display:none;"></div></button>
+            <button class="tile-btn" onclick="openEditor('t3')"><div data-label="③むずかしかった" class="text-orange-400 font-black text-xs"></div><div id="p-t3" class="tile-preview"></div><div id="badge-t3" class="badge" style="display:none;"></div></button>
+            <button class="tile-btn" onclick="openEditor('t4')"><div data-label="④つぎのこと" class="text-orange-400 font-black text-xs"></div><div id="p-t4" class="tile-preview"></div><div id="badge-t4" class="badge" style="display:none;"></div></button>
             <button class="tile-btn col-span-2" onclick="document.getElementById('fileInput').click()">
-                <div class="text-orange-400 font-black text-xs">しゃしん</div><div id="photoLabelInner" class="absolute top-4 right-4 text-[10px] text-orange-300">0 / 2枚</div>
+                <div data-label="しゃしん" class="text-orange-400 font-black text-xs"></div><div id="photoLabelInner" class="absolute top-4 right-4 text-[10px] text-orange-300">0 / 2枚</div>
                 <div id="photoGrid" class="photo-grid-mini h-full"></div>
                 <input type="file" id="fileInput" accept="image/*" multiple style="display:none;" onchange="handlePhotos(this)">
             </button>
         </div>
         <div class="flex gap-4">
-            <button onclick="resetCurrentForm()" class="flex-1 bg-red-400 text-white rounded-[2rem] py-5 font-black text-2xl shadow-xl active:scale-95 border-b-8 border-red-600">全部けす</button>
-            <button id="saveBtnContainer" onclick="startSaveProcess()" class="flex-[2] bg-orange-400 text-white rounded-[2rem] py-5 font-black text-2xl shadow-xl active:scale-95 border-b-8 border-orange-600">
-                <span id="saveBtnLabel">ぜんぶ ほぞんする 💎</span>
+            <button onclick="resetAll()" data-label="全部消す" class="flex-1 bg-red-400 text-white rounded-[2rem] py-5 font-black text-2xl shadow-xl border-b-8 border-red-600 active:scale-95 transition-all">全部消す</button>
+            <button id="saveBtnContainer" onclick="startSaveProcess()" class="flex-[2] bg-orange-400 text-white rounded-[2rem] py-5 font-black text-2xl shadow-xl border-b-8 border-orange-600 active:scale-95 transition-all">
+                <span id="saveBtnLabel" data-label="ぜんぶ ほぞんする 💎"></span>
             </button>
         </div>
     </div>
 
     <div id="editorOverlay">
         <div class="flex justify-between items-center mb-4 px-2 relative">
-            <button onclick="closeEditor(false)" class="text-gray-400 font-black text-2xl p-2">✖ やめる</button>
-            <div id="editorTitle" class="absolute left-1/2 -translate-x-1/2 text-orange-400 font-black text-2xl"></div>
+            <button onclick="closeEditor(false)" data-label="やめる" class="text-gray-400 font-black text-2xl p-2 active:scale-90 transition-all"></button>
+            <div id="editorTitle" class="absolute left-1/2 -translate-x-1/2 text-orange-400 font-black text-2xl italic"></div>
             <div class="w-20"></div> 
         </div>
         <div class="flex-1 relative flex flex-col min-h-0">
-            <div id="loadingStatus" style="display:none;" class="absolute inset-0 bg-white/80 z-[6000] flex flex-col items-center justify-center rounded-[2.5rem]"><div class="text-3xl font-black text-orange-400 animate-bounce">ちょっとまってね🪄</div></div>
-            <div id="richDisplay" contenteditable="true" spellcheck="false"></div>
+            <div id="loadingStatus" style="display:none;" class="absolute inset-0 bg-white/80 z-[6000] flex flex-col items-center justify-center rounded-[2.5rem]"><div class="text-3xl font-black text-orange-400 animate-bounce">🪄</div></div>
+            <div id="richDisplay"></div>
         </div>
         
-        <!-- UI変更箇所: 下部ボタンエリア -->
         <div class="editor-bottom-nav">
-            <!-- 左2つ: サイズ小さめ、控えめな色 -->
-            <button onclick="clearInEditor()" class="bg-zinc-200 rounded-[1.5rem] py-3 text-zinc-500 font-black text-xs btn-active-state">全部<br>消す</button>
-            <button onmousedown="deleteOneChar(event)" class="bg-zinc-200 rounded-[1.5rem] py-3 text-zinc-500 font-black text-xs btn-active-state">1字<br>消す</button>
+            <button onclick="appState.tiles[appState.activeId] = []; renderEditorDisplay();" data-label="全部消す" class="bg-zinc-200 rounded-[1.5rem] py-3 text-zinc-500 font-black text-xs btn-active-state">全部<br>消す</button>
+            <button onclick="deleteOneChar()" data-label="1字消す" class="bg-zinc-200 rounded-[1.5rem] py-3 text-zinc-500 font-black text-xs btn-active-state">1字<br>消す</button>
             
-            <!-- 中央: 最大サイズ、一番目立つ色 -->
             <button id="micBtn" onclick="handleMicAction()" class="bg-sky-500 rounded-[2.5rem] py-8 text-white font-black text-4xl shadow-lg border-b-8 border-sky-700 btn-active-state">
-                <span id="micLabel">話す</span>
+                <span id="micLabel" data-label="話す"></span>
             </button>
             
-            <!-- 右: 元のサイズ、2番目に目立つ色 -->
-            <button onclick="event.stopPropagation(); closeEditor(true);" class="bg-orange-500 rounded-[2rem] py-6 text-white font-black text-2xl shadow-md border-b-4 border-orange-700 btn-active-state">決定</button>
+            <button onclick="closeEditor(true)" data-label="決定" class="bg-orange-500 rounded-[2rem] py-6 text-white font-black text-2xl shadow-md border-b-4 border-orange-700 btn-active-state">決定</button>
         </div>
     </div>
 
-    <div id="subjectModal" class="modal-bg" onclick="if(event.target===this) closeModal('subjectModal')"><div class="modal-content text-center shadow-2xl"><h2 class="text-2xl font-black text-orange-400 mb-6">どの きょうか？</h2><div id="subjectGrid" class="subject-grid"></div><button onclick="closeModal('subjectModal')" class="text-gray-400 font-bold">やめる</button></div></div>
-    <div id="historyModal" class="modal-bg" onclick="if(event.target===this) closeModal('historyModal')"><div class="modal-content h-[85vh] flex flex-col max-w-2xl overflow-hidden shadow-2xl"><h2 id="historyTitle" class="text-3xl font-black text-orange-400 mb-6 text-center italic">🎁 きろく</h2><div id="historyList" class="flex-1 overflow-y-auto pr-2"></div><button onclick="closeModal('historyModal')" class="w-full mt-6 bg-orange-400 text-white py-5 rounded-[2rem] font-black text-2xl">とじる</button></div></div>
-    <div id="photoViewerOverlay" class="modal-bg" onclick="closePhoto()" style="background-color:rgba(0,0,0,0.95);"><img id="fullPhoto" class="max-w-[95%] max-h-[85%] object-contain rounded-2xl border-4 border-white shadow-2xl"><p class="text-white font-black mt-6 text-xl animate-bounce">タップして とじる</p></div>
+    <div id="subjectModal" class="modal-bg" onclick="if(event.target===this) closeModal('subjectModal')">
+        <div class="modal-content text-center shadow-2xl">
+            <h2 data-label="どの きょうか？" class="text-2xl font-black text-orange-400 mb-6 italic"></h2>
+            <div id="subjectGrid" class="subject-grid"></div>
+            <button onclick="closeModal('subjectModal')" data-label="やめる" class="text-gray-400 font-bold">やめる</button>
+        </div>
+    </div>
+
+    <div id="historyModal" class="modal-bg" onclick="if(event.target===this) closeModal('historyModal')">
+        <div class="modal-content h-[85vh] flex flex-col max-w-2xl overflow-hidden shadow-2xl">
+            <h2 id="historyTitle" class="text-3xl font-black text-orange-400 mb-6 text-center italic"></h2>
+            <div id="historyList" class="flex-1 overflow-y-auto pr-2"></div>
+            <button onclick="closeModal('historyModal')" data-label="やめる" class="w-full mt-6 bg-gray-100 text-gray-400 py-5 rounded-[2rem] font-black text-2xl italic">とじる</button>
+        </div>
+    </div>
+
+    <div id="photoViewerOverlay" class="modal-bg" onclick="closeModal('photoViewerOverlay')" style="background-color:rgba(0,0,0,0.95);">
+        <img id="fullPhoto" class="max-w-[95%] max-h-[85%] object-contain rounded-2xl border-4 border-white shadow-2xl">
+        <p class="text-white font-black mt-6 text-xl animate-bounce">タップして とじる</p>
+    </div>
 
 </body>
 </html>
