@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ひらがな スケッチブック Pro v34</title>
+    <title>ひらがな スケッチブック Pro v37</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         .sketchbook { background-image: radial-gradient(#e5e7eb 1px, transparent 1px); background-size: 20px 20px; }
@@ -16,118 +16,139 @@
     <h1 class="text-2xl font-black text-orange-400 my-1 tracking-tighter">ひらがな スケッチブック</h1>
 
     <div class="flex-1 w-full max-w-3xl bg-white rounded-3xl shadow-inner border-4 border-orange-100 p-6 mb-2 flex flex-col sketchbook relative">
-        <textarea id="output" class="w-full h-full bg-transparent text-6xl font-black text-gray-700 leading-tight resize-none focus:outline-none" placeholder="おしてね を おして はなしてね" spellcheck="false"></textarea>
+        <textarea id="output" 
+            class="w-full h-full bg-transparent text-6xl font-black text-gray-700 leading-tight resize-none focus:outline-none"
+            placeholder="おしてね を おして はなしてね"
+            spellcheck="false"></textarea>
+        
         <div id="preview" class="text-2xl font-bold text-sky-300 italic pointer-events-none mt-2"></div>
         
-        <div class="absolute bottom-4 right-4 flex flex-col items-end">
-            <select id="voiceSelect" class="text-[10px] bg-white/90 border-2 border-orange-200 rounded-lg px-2 py-1 mb-1 max-w-[200px] outline-none shadow-sm font-bold">
-                <option>こえを さがしています...</option>
-            </select>
-            <div id="voiceStatus" class="text-[9px] text-gray-400 font-mono leading-tight bg-white/50 px-1 rounded">Total: ?</div>
-        </div>
+        <div id="voiceStatus" class="text-[9px] text-gray-300 font-mono mt-1 text-right">System Voice Mode</div>
     </div>
 
     <div class="w-full max-w-4xl grid grid-cols-5 gap-2 mb-6">
-        <button id="clearBtn" class="bg-white border-2 border-gray-200 rounded-2xl py-2 active:bg-gray-100 outline-none"><span class="text-3xl">🧹</span></button>
-        <button id="backspaceBtn" class="bg-white border-2 border-orange-200 rounded-2xl py-2 active:bg-orange-50 outline-none"><span class="text-3xl">⌫</span></button>
-        <button id="newLineBtn" class="bg-white border-2 border-gray-200 rounded-2xl py-2 active:bg-gray-100 outline-none"><span class="text-3xl">⏎</span></button>
-        <button id="listenBtn" class="bg-green-400 border-4 border-green-100 rounded-2xl py-2 shadow-lg active:scale-95 outline-none">
-            <span class="text-3xl">📢</span><br><span class="text-white text-[9px] font-black italic tracking-tighter">きいてみる</span>
+        
+        <button id="clearBtn" class="bg-white border-2 border-gray-200 rounded-2xl py-2 active:bg-gray-100 outline-none flex flex-col items-center justify-center">
+            <span class="text-3xl">🧹</span>
+            <span class="text-[9px] font-bold text-gray-400 font-black">ぜんぶ消す</span>
         </button>
-        <button id="micBtn" class="bg-sky-400 border-4 border-sky-100 rounded-2xl py-2 shadow-lg active:scale-95 outline-none">
+
+        <button id="backspaceBtn" class="bg-white border-2 border-orange-200 rounded-2xl py-2 active:bg-orange-50 outline-none flex flex-col items-center justify-center">
+            <span class="text-3xl">⌫</span>
+            <span class="text-[9px] font-bold text-orange-400 font-black">1字けす</span>
+        </button>
+
+        <button id="newLineBtn" class="bg-white border-2 border-gray-200 rounded-2xl py-2 active:bg-gray-100 outline-none flex flex-col items-center justify-center">
+            <span class="text-3xl">⏎</span>
+            <span class="text-[9px] font-bold text-gray-400 font-black">つぎの行</span>
+        </button>
+
+        <button id="listenBtn" class="bg-green-400 border-4 border-green-100 rounded-2xl py-2 shadow-lg active:scale-95 outline-none flex flex-col items-center justify-center">
+            <span class="text-3xl">📢</span>
+            <span class="text-white text-[9px] font-black italic tracking-tighter">きいてみる</span>
+        </button>
+
+        <button id="micBtn" class="bg-sky-400 border-4 border-sky-100 rounded-2xl py-2 shadow-lg active:scale-95 outline-none flex flex-col items-center justify-center">
             <span id="btnLabel" class="text-white text-xl font-black italic tracking-tighter">おしてね</span>
         </button>
+
     </div>
 
     <script>
+        // ★ご指定のURLを固定しました
         const GAS_URL = 'https://script.google.com/macros/s/AKfycbzhJTL1fmXZFnrSzcM-n_N-ahauuOTTurjJyh5vSP1wUZy_x__C6F-J_YrJQm_n4Y-i/exec'; 
+
+        const micBtn = document.getElementById('micBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const backspaceBtn = document.getElementById('backspaceBtn');
+        const newLineBtn = document.getElementById('newLineBtn');
+        const listenBtn = document.getElementById('listenBtn');
+        const btnLabel = document.getElementById('btnLabel');
         const output = document.getElementById('output');
-        const voiceSelect = document.getElementById('voiceSelect');
-        const voiceStatus = document.getElementById('voiceStatus');
-        let voices = [];
-
-        function updateVoiceList() {
-            const allVoices = window.speechSynthesis.getVoices();
-            if (allVoices.length === 0 || allVoices.length === voices.length) return;
-            voices = allVoices;
-
-            const currentSelection = voiceSelect.value;
-            voiceSelect.innerHTML = '';
-            
-            // 1. Siri/Premium を最優先
-            const priorityVoices = voices.filter(v => v.name.includes('Siri') || v.name.includes('Premium') || v.name.includes('Enhanced'));
-            // 2. それ以外の日本語
-            const otherJpVoices = voices.filter(v => v.lang.includes('ja') && !priorityVoices.includes(v));
-            // 3. 全て
-            const otherVoices = voices.filter(v => !priorityVoices.includes(v) && !otherJpVoices.includes(v));
-
-            const combined = [...priorityVoices, ...otherJpVoices, ...otherVoices];
-
-            combined.forEach(v => {
-                const option = document.createElement('option');
-                option.value = v.name;
-                let label = v.name.replace(' (ja-JP)', '').replace(' (ja_JP)', '');
-                if (v.name.includes('Siri') || v.name.includes('Premium')) label = "⭐ " + label;
-                if (!v.lang.includes('ja')) label = "[他] " + label;
-                option.textContent = label;
-                voiceSelect.appendChild(option);
-            });
-
-            voiceStatus.innerText = `Total Voices: ${voices.length}`;
-            if (currentSelection) voiceSelect.value = currentSelection;
-        }
-
-        window.speechSynthesis.onvoiceschanged = updateVoiceList;
-        setInterval(updateVoiceList, 2000);
+        const preview = document.getElementById('preview');
 
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         let isRunning = false;
 
-        if (SpeechRecognition) {
+        if (!SpeechRecognition) {
+            output.value = "Safariで ひらいてね";
+        } else {
             const recognition = new SpeechRecognition();
             recognition.lang = 'ja-JP';
             recognition.interimResults = true;
 
-            document.getElementById('micBtn').onclick = () => {
-                if (!isRunning) recognition.start();
-                else recognition.stop();
+            micBtn.onclick = () => {
+                if (!isRunning) { try { recognition.start(); } catch(e) {} } 
+                else { recognition.stop(); btnLabel.innerText = "WAIT"; }
             };
 
-            document.getElementById('listenBtn').onclick = () => {
+            // 【読み上げ】OSのデフォルト設定に従うロジック
+            listenBtn.onclick = () => {
                 window.speechSynthesis.cancel();
-                const selectedName = voiceSelect.value;
-                const voice = voices.find(v => v.name === selectedName);
-
-                const uttr = new SpeechSynthesisUtterance(output.value || "こんにちは");
-                if (voice) uttr.voice = voice;
-                uttr.lang = voice ? voice.lang : 'ja-JP';
-                uttr.rate = 0.92; 
+                const uttr = new SpeechSynthesisUtterance(output.value || "なにか かいてね");
+                uttr.lang = 'ja-JP';
+                uttr.rate = 0.95; // わずかにゆっくり
+                uttr.pitch = 1.0;
                 window.speechSynthesis.speak(uttr);
             };
 
-            document.getElementById('clearBtn').onclick = () => { if(confirm("けす？")) output.value = ""; };
-            document.getElementById('backspaceBtn').onclick = () => {
-                const s = output.selectionStart;
-                output.value = output.value.substring(0, s - 1) + output.value.substring(output.selectionEnd);
-                output.selectionStart = output.selectionEnd = s - 1;
-                output.focus();
-            };
-            document.getElementById('newLineBtn').onclick = () => {
-                const s = output.selectionStart;
-                output.value = output.value.substring(0, s) + "\n" + output.value.substring(s);
-                output.selectionStart = output.selectionEnd = s + 1;
+            // クリア
+            clearBtn.onclick = () => { if(output.value && confirm("ぜんぶ けして いい？")) output.value = ""; };
+
+            // 1字消す（カーソル位置対応）
+            backspaceBtn.onclick = () => {
+                const start = output.selectionStart;
+                const end = output.selectionEnd;
+                const val = output.value;
+                if (start === end) {
+                    if (start > 0) {
+                        output.value = val.substring(0, start - 1) + val.substring(end);
+                        output.selectionStart = output.selectionEnd = start - 1;
+                    }
+                } else {
+                    output.value = val.substring(0, start) + val.substring(end);
+                    output.selectionStart = output.selectionEnd = start;
+                }
                 output.focus();
             };
 
-            recognition.onstart = () => { isRunning = true; document.getElementById('micBtn').classList.add('bg-red-500', 'pulse-red'); document.getElementById('btnLabel').innerText = "おわる"; };
+            // 改行（カーソル位置対応）
+            newLineBtn.onclick = () => {
+                const start = output.selectionStart;
+                const val = output.value;
+                output.value = val.substring(0, start) + "\n" + val.substring(start);
+                output.selectionStart = output.selectionEnd = start + 1;
+                output.focus();
+            };
+
+            recognition.onstart = () => {
+                isRunning = true;
+                micBtn.classList.add('bg-red-500', 'pulse-red');
+                btnLabel.innerText = "おわる";
+                preview.innerText = "きいてるよ...";
+            };
+
             recognition.onresult = (event) => {
+                let interim = '';
                 let final = '';
                 for (let i = event.resultIndex; i < event.results.length; i++) {
-                    if (event.results[i].isFinal) final += event.results[i][0].transcript;
+                    const transcript = event.results[i][0].transcript;
+                    if (event.results[i].isFinal) final += transcript;
+                    else interim += transcript;
                 }
-                if (final) sendToGas(final);
+                if (interim) preview.innerText = interim;
+                if (final) {
+                    preview.innerText = "ひらがな に してるよ...";
+                    sendToGas(final);
+                }
             };
-            recognition.onend = () => { isRunning = false; document.getElementById('micBtn').classList.remove('bg-red-500', 'pulse-red'); document.getElementById('btnLabel').innerText = "おしてね"; };
+
+            recognition.onend = () => {
+                isRunning = false;
+                micBtn.classList.remove('bg-red-500', 'pulse-red');
+                btnLabel.innerText = "おしてね";
+                preview.innerText = "";
+            };
         }
 
         async function sendToGas(text) {
@@ -135,13 +156,19 @@
                 const res = await fetch(`${GAS_URL}?text=${encodeURIComponent(text)}`);
                 const data = await res.json();
                 if (data.words) {
+                    const newText = data.words.join('');
                     const start = output.selectionStart;
-                    const add = data.words.join('');
-                    output.value = output.value.substring(0, start) + add + output.value.substring(start);
-                    output.selectionStart = output.selectionEnd = start + add.length;
+                    const end = output.selectionEnd;
+                    const val = output.value;
+                    // カーソル位置に挿入
+                    output.value = val.substring(0, start) + newText + val.substring(end);
+                    output.selectionStart = output.selectionEnd = start + newText.length;
                     output.focus();
+                    preview.innerText = "";
                 }
-            } catch (e) {}
+            } catch (e) {
+                preview.innerText = "エラー：つうしんを かくにんしてね";
+            }
         }
     </script>
 </body>
