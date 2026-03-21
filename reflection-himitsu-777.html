@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>学びの足跡 v6.0</title>
+    <title>学びの足跡 v6.1</title>
     <script src="https://cdn.tailwindcss.com"></script>
     
     <script>
         // --- 1. データ管理 ---
         var GAS_URL = 'https://script.google.com/macros/s/AKfycbxxE14tNshFIqZHwzhyGQtRDeSazD9aPex9Tm0gIGJjmUvd8jAiFN-bkQyNIt_D9cV_/exec';
-        var STORAGE_KEY = 'manabi_takara_history_v2'; // 絵文字保存対応のためキーを更新
+        var STORAGE_KEY = 'manabi_takara_history_v2';
         
         var appState = { 
             activeId: "", 
@@ -18,9 +18,8 @@
             editingId: null 
         };
         var isRec = false;
-        var selectedSubject = "";
+        var selectedSubject = "未設定"; // 初期値を設定してエラー防止
 
-        // ご褒美絵文字 50種類
         var EMOJI_LIST = [
             "🌸", "⭐", "🦖", "🚀", "🦄", "👑", "💎", "🎈", "🦁", "🐬", 
             "🍭", "🎨", "⚽", "🌈", "✨", "🐳", "🐱", "🐶", "🐰", "🐼", 
@@ -31,7 +30,7 @@
 
         var ALL_SUBJECTS = ["国語", "算数", "生活", "理科", "社会", "音楽", "図工", "体育", "道徳", "外国語"];
 
-        // --- 2. 画面操作 ---
+        // --- 2. 画面操作（ガードを強化） ---
         function openEditor(id) {
             appState.activeId = id;
             var overlay = document.getElementById('editorOverlay');
@@ -60,14 +59,72 @@
             m.style.display = 'flex'; m.style.pointerEvents = 'auto'; m.style.zIndex = "10000";
         }
 
-        function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+        function closeModal(id) { 
+            var m = document.getElementById(id);
+            if (m) m.style.display = 'none'; 
+        }
 
-        // --- 3. 履歴・保存（なおすボタン完全修正版） ---
+        // --- 3. 履歴・保存ロジック（はい！を確実に動かす） ---
         function getHistory() {
             try {
                 var data = localStorage.getItem(STORAGE_KEY);
                 return data ? JSON.parse(data) : [];
             } catch (e) { return []; }
+        }
+
+        function executeSave() {
+            console.log("Saving...");
+            var history = getHistory();
+            var tilesCopy = JSON.parse(JSON.stringify(appState.tiles));
+            var badgesCopy = JSON.parse(JSON.stringify(appState.badges));
+
+            if (appState.editingId) {
+                var index = history.findIndex(function(h) { return h.id === appState.editingId; });
+                if (index !== -1) {
+                    history[index].fullData = tilesCopy;
+                    history[index].badges = badgesCopy;
+                }
+            } else {
+                history.unshift({ 
+                    id: Date.now(), 
+                    date: new Date().toLocaleString('ja-JP'), 
+                    subject: selectedSubject, 
+                    fullData: tilesCopy,
+                    badges: badgesCopy
+                });
+            }
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(history.slice(0, 30)));
+            alert('たからばこに いれたよ！');
+            location.reload();
+        }
+
+        function loadHistoryToApp(historyId) {
+            var history = getHistory();
+            var target = history.find(function(h) { return h.id === historyId; });
+            if(target && confirm("この きろくを なおしますか？")) {
+                appState.tiles = JSON.parse(JSON.stringify(target.fullData));
+                appState.badges = JSON.parse(JSON.stringify(target.badges || { t1: "", t2: "", t3: "", t4: "" }));
+                appState.editingId = historyId;
+                refreshTiles();
+                closeModal('historyModal');
+                document.getElementById('saveBtnLabel').innerText = "なおして ほぞんする 💰";
+                document.getElementById('saveBtnContainer').classList.replace('bg-orange-400', 'bg-sky-500');
+            }
+        }
+
+        // --- 4. 描画・UI（教科並び順固定） ---
+        function renderSubjectGrid() {
+            var grid = document.getElementById('subjectGrid');
+            grid.innerHTML = ALL_SUBJECTS.map(function(s) {
+                return '<button onclick="confirmSave(\'' + s + '\')" class="bg-orange-400 text-white p-6 rounded-2xl font-black text-2xl shadow-md active:scale-95 z-[10001] relative">' + s + '</button>';
+            }).join('');
+        }
+
+        function confirmSave(subject) {
+            selectedSubject = subject;
+            closeModal('subjectModal');
+            document.getElementById('confirmText').innerText = subject + "に きろくする？";
+            openModal('confirmModal');
         }
 
         function renderHistorySubjects() {
@@ -90,80 +147,27 @@
             var history = getHistory();
             var filtered = history.filter(function(h) { return h.subject === subject; });
             var list = document.getElementById('historyList');
-            
             var html = '<button onclick="renderHistorySubjects()" class="mb-6 text-orange-400 font-black text-xl flex items-center"><span class="mr-2">⬅️</span> もどる</button>';
-            
             filtered.forEach(function(h) {
-                var txt1 = (h.fullData.t1 || []).map(function(w){return w.surface;}).join('');
-                var txt2 = (h.fullData.t2 || []).map(function(w){return w.surface;}).join('');
-                var txt3 = (h.fullData.t3 || []).map(function(w){return w.surface;}).join('');
-                var txt4 = (h.fullData.t4 || []).map(function(w){return w.surface;}).join('');
-
                 html += '<div class="bg-white border-4 border-orange-100 p-6 rounded-[2.5rem] mb-6 shadow-sm">' +
                         '<div class="flex justify-between items-center mb-3">' +
                         '<div class="text-[10px] text-orange-300 font-black">' + h.date + '</div>' +
-                        '<button onclick="loadHistoryToApp(' + h.id + ')" class="bg-sky-400 text-white px-6 py-2 rounded-full text-sm font-black shadow-md active:scale-90 transition-transform">✎なおす</button>' +
-                        '</div>' +
-                        '<div class="space-y-2 text-lg font-black text-gray-700 leading-snug">' +
-                        '<div class="border-b border-orange-50 pb-1">① ' + txt1 + '</div>' +
-                        '<div class="border-b border-orange-50 pb-1">② ' + txt2 + '</div>' +
-                        '<div class="border-b border-orange-50 pb-1">③ ' + txt3 + '</div>' +
-                        '<div>④ ' + txt4 + '</div>' +
-                        '</div>' +
-                        '<div class="flex gap-3 mt-4 overflow-x-auto pb-2">';
-                
-                (h.fullData.photos || []).forEach(function(p) {
+                        '<button onclick="loadHistoryToApp(' + h.id + ')" class="bg-sky-400 text-white px-6 py-2 rounded-full text-sm font-black shadow-md active:scale-90">✎なおす</button>' +
+                        '</div><div class="space-y-2 text-lg font-black text-gray-700 leading-snug">' +
+                        '<div>① ' + (h.fullData.t1||[]).map(w=>w.surface).join('') + '</div>' +
+                        '<div>② ' + (h.fullData.t2||[]).map(w=>w.surface).join('') + '</div>' +
+                        '<div>③ ' + (h.fullData.t3||[]).map(w=>w.surface).join('') + '</div>' +
+                        '<div>④ ' + (h.fullData.t4||[]).map(w=>w.surface).join('') + '</div>' +
+                        '</div><div class="flex gap-3 mt-4 overflow-x-auto pb-2">';
+                (h.fullData.photos||[]).forEach(function(p) {
                     html += '<img src="' + p + '" class="w-24 h-24 object-cover rounded-2xl border-2 border-orange-50" onclick="viewPhoto(\'' + p + '\')">';
                 });
-                
                 html += '</div></div>';
             });
             list.innerHTML = html;
         }
 
-        function loadHistoryToApp(historyId) {
-            console.log("Loading history ID:", historyId);
-            var history = getHistory();
-            var target = history.find(function(h) { return h.id === historyId; });
-            
-            if(target && confirm("この きろくを なおしますか？")) {
-                // データの復旧（絵文字 badges も含めて復旧）
-                appState.tiles = JSON.parse(JSON.stringify(target.fullData));
-                appState.badges = JSON.parse(JSON.stringify(target.badges || { t1: "", t2: "", t3: "", t4: "" }));
-                appState.editingId = historyId;
-                
-                refreshTiles();
-                closeModal('historyModal');
-                
-                // ボタンの見た目を変える
-                document.getElementById('saveBtnLabel').innerText = "なおして ほぞんする 💰";
-                document.getElementById('saveBtnContainer').classList.replace('bg-orange-400', 'bg-sky-500');
-            }
-        }
-
-        function executeSave() {
-            var history = getHistory();
-            if (appState.editingId) {
-                var index = history.findIndex(function(h) { return h.id === appState.editingId; });
-                if (index !== -1) {
-                    history[index].fullData = JSON.parse(JSON.stringify(appState.tiles));
-                    history[index].badges = JSON.parse(JSON.stringify(appState.badges));
-                }
-            } else {
-                history.unshift({ 
-                    id: Date.now(), 
-                    date: new Date().toLocaleString('ja-JP'), 
-                    subject: selectedSubject, 
-                    fullData: JSON.parse(JSON.stringify(appState.tiles)),
-                    badges: JSON.parse(JSON.stringify(appState.badges))
-                });
-            }
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(history.slice(0, 30)));
-            alert('たからばこに いれたよ！');
-            location.reload();
-        }
-
-        // --- 4. 写真・描画・音声（基本機能） ---
+        // --- 写真・描画・音声 ---
         function refreshTiles() {
             ['t1','t2','t3','t4'].forEach(function(id) {
                 var txt = appState.tiles[id].map(function(w){return w.surface;}).join('');
@@ -203,10 +207,7 @@
         function deletePhoto(index) { if (confirm("この写真を けしますか？")) { appState.tiles.photos.splice(index, 1); refreshTiles(); } }
         function viewPhoto(src) { document.getElementById('fullPhoto').src = src; document.getElementById('photoViewer').style.display = 'flex'; }
         function closePhoto() { document.getElementById('photoViewer').style.display = 'none'; }
-        function renderSubjectGrid() { document.getElementById('subjectGrid').innerHTML = ALL_SUBJECTS.map(function(s){ return '<button onclick="confirmSave(\'' + s + '\')" class="bg-orange-400 text-white p-6 rounded-2xl font-black text-2xl shadow-md active:scale-95 z-[10001] relative">' + s + '</button>'; }).join(''); }
-        function confirmSave(subject) { selectedSubject = subject; closeModal('subjectModal'); document.getElementById('confirmText').innerText = subject + "に きろくする？"; openModal('confirmModal'); }
 
-        // 音声認識
         var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         var rec = SpeechRecognition ? new SpeechRecognition() : null;
         if(rec) {
@@ -277,50 +278,20 @@
         </button>
     </div>
 
-    <div id="subjectModal" class="modal-bg" onclick="if(event.target===this) closeModal('subjectModal')">
-        <div class="bg-white rounded-[3rem] p-8 w-full max-w-lg modal-content border-8 border-orange-100 shadow-2xl text-center">
-            <h2 class="text-3xl font-black text-orange-400 mb-8">どの きょうか？</h2>
-            <div id="subjectGrid" class="grid grid-cols-2 gap-4 mb-6"></div>
-            <button onclick="closeModal('subjectModal')" class="text-gray-400 font-bold text-xl text-center">やめる</button>
-        </div>
-    </div>
-
-    <div id="historyModal" class="modal-bg" onclick="if(event.target===this) closeModal('historyModal')">
-        <div class="bg-amber-50 rounded-[3rem] p-8 w-full max-w-2xl h-[85vh] modal-content flex flex-col border-8 border-white shadow-2xl">
-            <h2 id="historyTitle" class="text-3xl font-black text-orange-400 mb-6 text-center italic">🎁 きろく</h2>
-            <div id="historyList" class="flex-1 overflow-y-auto pr-2"></div>
-            <button onclick="closeModal('historyModal')" class="w-full mt-6 bg-orange-400 text-white py-5 rounded-[2rem] font-black text-2xl">とじる</button>
-        </div>
-    </div>
-
     <div id="confirmModal" class="modal-bg" onclick="if(event.target===this) closeModal('confirmModal')">
-        <div class="bg-white rounded-[3rem] p-12 w-full max-w-sm modal-content border-8 border-orange-400 text-center">
+        <div class="bg-white rounded-[3rem] p-12 w-full max-w-sm modal-content border-8 border-orange-400 text-center relative z-[10001]">
             <p id="confirmText" class="text-3xl font-black text-gray-700 mb-10"></p>
             <div class="flex gap-4">
-                <button onclick="closeModal('confirmModal')" class="flex-1 bg-gray-100 py-5 rounded-2xl font-black text-gray-400 text-xl text-center flex items-center justify-center">いいえ</button>
-                <button onclick="executeSave()" class="flex-1 bg-orange-500 py-5 rounded-2xl font-black text-white text-xl shadow-lg text-center flex items-center justify-center">はい！</button>
+                <button onclick="event.stopPropagation(); closeModal('confirmModal');" class="flex-1 bg-gray-100 py-5 rounded-2xl font-black text-gray-400 text-xl text-center flex items-center justify-center relative z-[10002]">いいえ</button>
+                <button onclick="event.stopPropagation(); executeSave();" class="flex-1 bg-orange-500 py-5 rounded-2xl font-black text-white text-xl shadow-lg text-center flex items-center justify-center relative z-[10002]">はい！</button>
             </div>
         </div>
     </div>
 
-    <div id="photoViewer" class="fixed inset-0" style="display: none;" onclick="closePhoto()">
-        <img id="fullPhoto" class="max-w-[95%] max-h-[85%] object-contain rounded-2xl border-4 border-white shadow-2xl">
-        <p class="text-white font-bold mt-6 text-xl text-center animate-bounce">タップして とじる</p>
-    </div>
-
-    <div id="editorOverlay">
-        <div class="flex justify-between items-center mb-4 px-2">
-            <button onclick="closeEditor(false)" class="text-gray-400 font-black text-2xl p-2">✖ やめる</button>
-            <div id="editorTitle" class="text-orange-400 font-black text-3xl">編集</div>
-            <button onclick="closeEditor(true)" class="bg-orange-400 text-white px-12 py-4 rounded-full font-black text-2xl shadow-lg">決定</button>
-        </div>
-        <div id="richDisplay" contenteditable="true" class="shadow-inner"></div>
-        <div id="kanjiDisplay" class="text-lg text-gray-300 italic font-bold mt-2 px-4 opacity-50"></div>
-        <div class="grid grid-cols-2 gap-6 mt-6 pointer-events-auto">
-            <button id="micBtn" onclick="if(rec) isRec ? rec.stop() : rec.start()" class="bg-sky-400 rounded-[2rem] py-8 text-white font-black text-4xl shadow-xl active:scale-95 transition-all"><span id="micLabel">おしてね</span></button>
-            <button onclick="appState.tiles[appState.activeId].pop(); renderEditor();" class="bg-white border-4 border-orange-100 rounded-[2rem] py-8 text-orange-400 font-black text-4xl shadow-md">1字けす</button>
-        </div>
-    </div>
+    <div id="subjectModal" class="modal-bg" onclick="if(event.target===this) closeModal('subjectModal')"><div class="bg-white rounded-[3rem] p-8 w-full max-w-lg modal-content border-8 border-orange-100 text-center"><h2 class="text-3xl font-black text-orange-400 mb-8">どの きょうか？</h2><div id="subjectGrid" class="grid grid-cols-2 gap-4 mb-6"></div><button onclick="closeModal('subjectModal')" class="text-gray-400 font-bold text-xl">やめる</button></div></div>
+    <div id="historyModal" class="modal-bg" onclick="if(event.target===this) closeModal('historyModal')"><div class="bg-amber-50 rounded-[3rem] p-8 w-full max-w-2xl h-[85vh] modal-content flex flex-col border-8 border-white"><h2 id="historyTitle" class="text-3xl font-black text-orange-400 mb-6 text-center italic">🎁 きろく</h2><div id="historyList" class="flex-1 overflow-y-auto pr-2"></div><button onclick="closeModal('historyModal')" class="w-full mt-6 bg-orange-400 text-white py-5 rounded-[2rem] font-black text-2xl">とじる</button></div></div>
+    <div id="photoViewer" class="fixed inset-0" style="display: none;" onclick="closePhoto()"><img id="fullPhoto" class="max-w-[95%] max-h-[85%] object-contain rounded-2xl border-4 border-white shadow-2xl"><p class="text-white font-bold mt-6 text-xl text-center">タップして とじる</p></div>
+    <div id="editorOverlay"><div class="flex justify-between items-center mb-4 px-2"><button onclick="closeEditor(false)" class="text-gray-400 font-black text-2xl p-2">✖ やめる</button><div id="editorTitle" class="text-orange-400 font-black text-3xl">編集</div><button onclick="closeEditor(true)" class="bg-orange-400 text-white px-12 py-4 rounded-full font-black text-2xl shadow-lg">決定</button></div><div id="richDisplay" contenteditable="true" class="shadow-inner"></div><div id="kanjiDisplay" class="text-lg text-gray-300 italic font-bold mt-2 px-4 opacity-50"></div><div class="grid grid-cols-2 gap-6 mt-6 pointer-events-auto"><button id="micBtn" onclick="if(rec) isRec ? rec.stop() : rec.start()" class="bg-sky-400 rounded-[2rem] py-8 text-white font-black text-4xl shadow-xl active:scale-95 transition-all"><span id="micLabel">おしてね</span></button><button onclick="appState.tiles[appState.activeId].pop(); renderEditor();" class="bg-white border-4 border-orange-100 rounded-[2rem] py-8 text-orange-400 font-black text-4xl shadow-md">1字けす</button></div></div>
 
 </body>
 </html>
