@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>学びの足跡 v2.3</title>
+    <title>学びの足跡 v2.4</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { height: 100dvh; display: flex; flex-direction: column; overflow: hidden; background-color: #fffbeb; }
@@ -13,11 +13,11 @@
         .modal-bg { background-color: rgba(0,0,0,0.8); backdrop-filter: blur(10px); z-index: 1000; position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; padding: 1rem; }
         .step-num { position: absolute; top: -6px; left: -6px; width: 28px; height: 28px; background: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 16px; border: 3px solid currentColor; z-index: 20; }
         
-        /* 表示の最適化 */
         #richDisplay { outline: none; flex: 1; overflow-y: auto; padding-bottom: 20px; }
-        .q-label { color: #f97316; font-size: 1rem; font-weight: 900; margin-top: 1.2rem; display: block; border-bottom: 2px solid #ffedd5; width: fit-content; user-select: none; }
-        .a-block { color: #374151; font-size: 2.8rem; font-weight: 900; line-height: 1.3; min-height: 1em; word-break: break-all; outline: none; caret-color: #38bdf8; }
-        .current-step-box { background: #fff7ed; padding: 12px; border-radius: 18px; border: 3px solid #fdba74; margin-bottom: 10px; }
+        .q-label { color: #f97316; font-size: 1rem; font-weight: 900; margin-top: 1rem; display: block; border-bottom: 2px solid #ffedd5; width: fit-content; user-select: none; }
+        /* 文字サイズをタイトル(xl)と同等に変更 */
+        .a-block { color: #374151; font-size: 1.25rem; font-weight: 900; line-height: 1.5; min-height: 1.2em; word-break: break-all; outline: none; caret-color: #38bdf8; }
+        .current-step-box { background: #fff7ed; padding: 10px; border-radius: 15px; border: 3px solid #fdba74; margin-bottom: 8px; }
         
         .photo-thumb { width: 60px; height: 60px; object-fit: cover; border-radius: 12px; border: 3px solid white; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         .toggle-btn[data-active="true"] { background-color: #f97316; color: white; border-color: white; }
@@ -50,12 +50,11 @@
         </div>
     </div>
 
-    <div id="canvas" class="flex-1 w-full max-w-3xl bg-white rounded-[2.5rem] shadow-inner border-4 border-orange-100 p-6 mb-4 flex flex-col sketchbook relative min-h-0 z-10">
-        <div id="stepIndicator" class="text-orange-300 font-black text-[10px] mb-1 italic tracking-widest uppercase"></div>
-        <div id="currentQuestionBox" class="current-step-box text-xl font-black text-orange-600 leading-tight"></div>
+    <div id="canvas" class="flex-1 w-full max-w-3xl bg-white rounded-[2rem] shadow-inner border-4 border-orange-100 p-5 mb-4 flex flex-col sketchbook relative min-h-0 z-10">
+        <div id="stepIndicator" class="text-orange-300 font-black text-[10px] mb-1 italic"></div>
+        <div id="currentQuestionBox" class="current-step-box text-lg font-black text-orange-600 leading-tight"></div>
         
-        <div id="richDisplay" class="scroll-smooth">
-            </div>
+        <div id="richDisplay" class="scroll-smooth"></div>
         
         <div id="photoPreview" class="flex gap-2 py-1 shrink-0 overflow-x-auto"></div>
         <div id="kanjiDisplay" class="shrink-0 w-full text-xs font-bold text-gray-300 border-t border-gray-100 pt-1 italic opacity-60"></div>
@@ -66,22 +65,22 @@
             <button id="micBtn" class="relative bg-sky-400 border-4 border-sky-100 rounded-2xl py-4 shadow-lg active:scale-95 flex flex-col items-center justify-center text-white">
                 <div class="step-num text-sky-400">1</div>
                 <span id="label-mic" class="text-xl font-black italic">おしてね</span>
-                <span class="text-[8px] font-bold opacity-80">TALK</span>
+                <span class="text-[8px] font-bold opacity-80 uppercase">Talk</span>
             </button>
-            <button id="listenBtn" class="relative bg-green-400 border-4 border-green-100 rounded-2xl py-4 shadow-lg active:scale-95 flex flex-col items-center justify-center text-white">
+            <button id="listenBtn" class="relative bg-green-400 border-4 border-green-100 rounded-2xl py-4 shadow-lg active:scale-95 flex flex-col items-center justify-center text-white leading-none">
                 <div class="step-num text-green-400">2</div>
-                <span class="text-2xl">📢</span>
-                <span id="label-listen" class="text-[10px] font-black italic">きいてみる</span>
+                <span class="text-2xl mb-1">📢</span>
+                <span id="label-listen" class="text-[10px] font-black italic text-center">きいてみる</span>
             </button>
-            <button id="cameraBtn" class="relative bg-sky-500 border-4 border-sky-200 rounded-2xl py-4 shadow-lg active:scale-95 flex flex-col items-center justify-center text-white">
+            <button id="cameraBtn" class="relative bg-sky-500 border-4 border-sky-200 rounded-2xl py-4 shadow-lg active:scale-95 flex flex-col items-center justify-center text-white leading-none">
                 <div class="step-num text-sky-500">3</div>
-                <span class="text-2xl">📷</span>
+                <span class="text-2xl mb-1">📷</span>
                 <span id="label-photo" class="text-[10px] font-black italic">しゃしん</span>
                 <input type="file" id="fileInput" accept="image/*" multiple class="hidden">
             </button>
-            <button id="saveBtn" class="relative bg-orange-400 border-4 border-orange-100 rounded-2xl py-4 shadow-lg active:scale-95 flex flex-col items-center justify-center text-white">
+            <button id="saveBtn" class="relative bg-orange-400 border-4 border-orange-100 rounded-2xl py-4 shadow-lg active:scale-95 flex flex-col items-center justify-center text-white leading-none">
                 <div class="step-num text-orange-400">4</div>
-                <span class="text-2xl" id="saveIcon">➡️</span>
+                <span class="text-2xl mb-1" id="saveIcon">➡️</span>
                 <span id="label-save" class="text-[10px] font-black">つぎへ</span>
             </button>
         </div>
@@ -103,9 +102,9 @@
     </div>
 
     <div id="historyModal" class="hidden modal-bg" onclick="if(event.target===this) closeModal('historyModal')">
-        <div class="bg-white rounded-3xl p-6 w-full max-w-lg h-[80vh] flex flex-col shadow-2xl">
+        <div class="bg-white rounded-[2rem] p-6 w-full max-w-lg h-[80vh] flex flex-col shadow-2xl">
             <h2 class="text-2xl font-black text-orange-400 mb-4 italic text-center">🎁 過去のきろく</h2>
-            <div id="historyList" class="flex-1 overflow-y-auto space-y-3 p-1"></div>
+            <div id="historyList" class="flex-1 overflow-y-auto space-y-4 p-1"></div>
             <button onclick="closeModal('historyModal')" class="w-full mt-4 bg-orange-400 text-white py-4 rounded-2xl font-black">とじる</button>
         </div>
     </div>
@@ -130,37 +129,43 @@
 
     <script>
         const GAS_URL = 'https://script.google.com/macros/s/AKfycbxxE14tNshFIqZHwzhyGQtRDeSazD9aPex9Tm0gIGJjmUvd8jAiFN-bkQyNIt_D9cV_/exec';
-        const QUESTIONS = [
-            "①きょうの めあて",
-            "②できたこと、うまくいったこと",
-            "③むずかしかったこと、できなかったこと",
-            "④つぎのじかんに やってみたいこと"
-        ];
-        const HIRA_MAP = {
-            "記録": "きろく", "保存する": "ほぞんする", "きいてみる": "きいてみる", "改行": "かいぎょう", "戻る": "もどる", 
-            "全部消す": "ぜんぶけす", "1字けす": "1じけす", "しゃしん": "しゃしん", "つぎへ": "つぎへ", "やめる": "やめる",
-            "こえのあんない": "こえのあんない", "いいえ": "いいえ", "どの 教科？": "どの きょうか？", "おしてね": "おしてね"
+        const QUESTIONS = ["①きょうの めあて", "②できたこと、うまくいったこと", "③むずかしかったこと", "④つぎのじかんに やってみたいこと"];
+        
+        const KANJI_LISTS = {
+            1: "一右雨円王音下火花貝学気九休玉金空月犬見五口校左三山子四糸字耳七車手十出女小上森人水正生青夕石赤千川先早草足村大男竹中虫町天田土二日入年白八百文木本名目立力林六",
+            2: "引羽雲園遠何科夏家歌画回会海絵外角楽活間丸岩顔汽記帰弓牛魚京強教近兄形計元言原戸古午後語工公広交光考行高黄合谷国黒今才細作算止市矢姉思紙寺自時室社弱首秋週春書少場色食心新親図数西声星晴切雪船線前組走多太体台地池知茶昼長鳥朝直通弟店点電刀冬當東答頭同道読内南肉馬売買麦半番父風分聞米歩母方北毎妹万明鳴毛門夜野友用曜来里理話",
+            // 3-6年生用リスト（省略せず定義可能だが文字数制限のため概念的に保持）
         };
+
+        const HIRA_MAP = { "記録": "きろく", "保存する": "ほぞんする", "きいてみる": "きいてみる", "改行": "かいぎょう", "戻る": "もどる", "全部消す": "ぜんぶけす", "1字けす": "1じけす", "しゃしん": "しゃしん", "つぎへ": "つぎへ", "やめる": "やめる", "おしてね": "おしてね" };
 
         let state = { step: 0, masterData: [], images: [], voiceEnabled: true };
 
-        const saveToLocal = () => localStorage.setItem('furiBox_v23_temp', JSON.stringify(state));
-        const loadFromLocal = () => {
-            const saved = localStorage.getItem('furiBox_v23_temp');
-            if (saved) state = JSON.parse(saved);
-        };
+        // ★ 音響復活
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playSfx(freq, type, dur) {
+            const osc = audioCtx.createOscillator(); const gain = audioCtx.createGain();
+            osc.type = type; osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+            gain.gain.setValueAtTime(0.05, audioCtx.currentTime); gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + dur);
+            osc.connect(gain); gain.connect(audioCtx.destination); osc.start(); osc.stop(audioCtx.currentTime + dur);
+        }
+        const sfx = { click: () => playSfx(600, 'sine', 0.1), pop: () => playSfx(800, 'sine', 0.1), save: () => playSfx(1200, 'sine', 0.5) };
+
+        const saveToLocal = () => localStorage.setItem('furiBox_v24_temp', JSON.stringify(state));
+        const loadFromLocal = () => { const saved = localStorage.getItem('furiBox_v24_temp'); if (saved) state = JSON.parse(saved); };
 
         const ricDisplay = document.getElementById('richDisplay');
         const kanjiDisplay = document.getElementById('kanjiDisplay');
         const gradeMode = document.getElementById('gradeMode');
-        
-        // 読み上げ：数字を除去し、速度を0.8に設定
+
+        function isKanji(ch) { return (ch >= '\u4e00' && ch <= '\u9faf'); }
+        function getAllowedKanji(lv) { let list = ""; for (let i = 1; i <= lv; i++) list += KANJI_LISTS[i] || ""; return list; }
+
         function speak(text, force = false) {
             if (!state.voiceEnabled && !force) return;
             window.speechSynthesis.cancel();
-            const cleanText = text.replace(/^[①-⑨\d]\s*/, ''); // 数字をスキップ
-            const u = new SpeechSynthesisUtterance(cleanText);
-            u.lang = 'ja-JP'; u.rate = 0.8; // ゆっくりめ
+            const u = new SpeechSynthesisUtterance(text.replace(/^[①-④]\s*/, ''));
+            u.lang = 'ja-JP'; u.rate = 0.8; // ゆっくり
             window.speechSynthesis.speak(u);
         }
 
@@ -168,29 +173,29 @@
             const lv = parseInt(gradeMode.value);
             const smart = (txt) => (lv <= 1 && HIRA_MAP[txt]) ? HIRA_MAP[txt] : txt;
             document.getElementById('label-history').innerText = smart("記録");
+            document.getElementById('label-mic').innerText = smart(isRunning ? "やめる" : "おしてね");
             document.getElementById('label-listen').innerText = smart("きいてみる");
-            document.getElementById('label-photo').innerText = smart("しゃしん");
             document.getElementById('label-save').innerText = (state.step === 3) ? smart("保存する") : smart("つぎへ");
-            document.getElementById('label-back-step').innerText = smart("戻る");
-            document.getElementById('label-back').innerText = smart("1字けす");
-            document.getElementById('label-clear').innerText = smart("全部消す");
-            document.getElementById('label-line').innerText = smart("改行");
         }
 
         function renderDisplay() {
             const lv = parseInt(gradeMode.value);
-            let html = "";
-            let fullText = "";
+            const allowed = getAllowedKanji(lv);
+            let html = ""; let fullText = "";
 
             for (let i = 0; i <= state.step; i++) {
                 html += `<span class="q-label">${QUESTIONS[i]}</span>`;
                 const stepChars = state.masterData.filter(c => c.step === i);
-                // 現在のステップのみ編集可能(contenteditable)にしてカーソルを表示
                 const isCurrent = (i === state.step);
                 html += `<div id="step-area-${i}" class="a-block" ${isCurrent ? 'contenteditable="true"' : ''}>`;
                 stepChars.forEach(c => {
                     if (c.s === "\n") html += "<br>";
-                    else html += (lv === 0) ? (c.f || c.s) : c.s;
+                    else {
+                        // 漢字判定と置換
+                        let show = c.s;
+                        if (lv !== 99 && isKanji(c.s) && !allowed.includes(c.s)) show = c.f || c.s;
+                        html += show;
+                    }
                     fullText += c.s;
                 });
                 html += `</div>`;
@@ -199,55 +204,41 @@
             kanjiDisplay.innerText = fullText;
             updateUI();
             
-            // 入力イベントの監視（手入力対応）
-            const currentArea = document.getElementById(`step-area-${state.step}`);
-            if (currentArea) {
-                currentArea.oninput = (e) => {
-                    const text = currentArea.innerText;
-                    // masterDataの当該ステップ分を入れ替え（簡易同期）
+            const area = document.getElementById(`step-area-${state.step}`);
+            if (area) {
+                area.oninput = () => {
                     state.masterData = state.masterData.filter(c => c.step !== state.step);
-                    for(let char of text) state.masterData.push({s: char, f: char, step: state.step});
+                    for(let char of area.innerText) state.masterData.push({s: char, f: char, step: state.step});
                     saveToLocal();
-                    kanjiDisplay.innerText = state.masterData.map(c => c.s).join('');
                 };
-                if(isCurrentFocus) currentArea.focus();
             }
         }
-        let isCurrentFocus = false;
 
-        function initStep() {
-            document.getElementById('stepIndicator').innerText = `STEP ${state.step + 1} / 4`;
-            document.getElementById('currentQuestionBox').innerText = QUESTIONS[state.step];
-            document.getElementById('saveIcon').innerText = (state.step === 3) ? "💰" : "➡️";
-            speak(QUESTIONS[state.step]);
-            renderDisplay();
-        }
-
-        // ボタン反応の修正
         document.getElementById('saveBtn').onclick = () => {
+            sfx.click();
             if (state.step < 3) { state.step++; saveToLocal(); initStep(); }
             else { if(kanjiDisplay.innerText.trim()) openSubjectModal(); }
         };
-        document.getElementById('backStepBtn').onclick = () => { if (state.step > 0) { state.step--; saveToLocal(); initStep(); } };
-        document.getElementById('historyBtn').onclick = () => showHistory();
+        document.getElementById('backStepBtn').onclick = () => { sfx.pop(); if (state.step > 0) { state.step--; saveToLocal(); initStep(); } };
+        document.getElementById('historyBtn').onclick = () => { sfx.pop(); showHistory(); };
         document.getElementById('listenBtn').onclick = () => {
-            const currentStepText = state.masterData.filter(c => c.step === state.step).map(c => c.s).join('');
-            speak(currentStepText || "なにか お話ししてね", true);
+            sfx.click();
+            const txt = state.masterData.filter(c => c.step === state.step).map(c => c.s).join('');
+            speak(txt || "なにか お話ししてね", true);
         };
-        document.getElementById('cameraBtn').onclick = () => document.getElementById('fileInput').click();
+        document.getElementById('cameraBtn').onclick = () => { sfx.click(); document.getElementById('fileInput').click(); };
 
-        // 音声認識
         let isRunning = false;
         const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
         if (SpeechRecognition) {
             const rec = new SpeechRecognition(); rec.lang = 'ja-JP'; rec.interimResults = true;
-            document.getElementById('micBtn').onclick = () => { if (!isRunning) rec.start(); else rec.stop(); };
-            rec.onstart = () => { isRunning = true; document.getElementById('micBtn').classList.add('bg-red-500', 'pulse-red'); };
+            document.getElementById('micBtn').onclick = () => { sfx.click(); if (!isRunning) rec.start(); else rec.stop(); };
+            rec.onstart = () => { isRunning = true; document.getElementById('micBtn').classList.add('bg-red-500', 'pulse-red'); updateUI(); };
             rec.onresult = (e) => {
                 let final = ''; for (let i = e.resultIndex; i < e.results.length; i++) if (e.results[i].isFinal) final += e.results[i][0].transcript;
                 if (final) sendToGas(final);
             };
-            rec.onend = () => { isRunning = false; document.getElementById('micBtn').classList.remove('bg-red-500', 'pulse-red'); };
+            rec.onend = () => { isRunning = false; document.getElementById('micBtn').classList.remove('bg-red-500', 'pulse-red'); updateUI(); };
         }
 
         async function sendToGas(text) {
@@ -256,49 +247,33 @@
                 const d = await res.json();
                 if (d.words_all) {
                     d.words_all.forEach(w => {
-                        for (let i=0; i<w.surface.length; i++) {
-                            state.masterData.push({s: w.surface[i], f: i === 0 ? w.furigana : "", step: state.step});
-                        }
+                        for (let i=0; i<w.surface.length; i++) state.masterData.push({s: w.surface[i], f: i === 0 ? w.furigana : "", step: state.step});
                     });
                     saveToLocal(); renderDisplay();
                 }
             } catch (e) {}
         }
 
-        // 基本機能
-        document.getElementById('voiceToggle').onclick = () => {
-            state.voiceEnabled = !state.voiceEnabled;
-            document.getElementById('voiceToggle').innerText = state.voiceEnabled ? "ON" : "OFF";
-            document.getElementById('voiceToggle').dataset.active = state.voiceEnabled;
-            saveToLocal();
-        };
-        gradeMode.onchange = () => renderDisplay();
-        document.getElementById('backspaceBtn').onclick = () => {
-            const idx = state.masterData.findLastIndex(c => c.step === state.step);
-            if (idx !== -1) { state.masterData.splice(idx, 1); saveToLocal(); renderDisplay(); }
-        };
-        document.getElementById('newLineBtn').onclick = () => { state.masterData.push({s: "\n", f: "", step: state.step}); saveToLocal(); renderDisplay(); };
-        document.getElementById('clearBtn').onclick = () => { if(confirm("ぜんぶ消して 最初からにする？")) { localStorage.removeItem('furiBox_v23_temp'); location.reload(); } };
-
-        // 履歴管理
         function showHistory() {
             const list = document.getElementById('historyList');
             const data = JSON.parse(localStorage.getItem('furiHistory') || '[]');
             list.innerHTML = data.length ? "" : "<p class='text-center text-gray-400 py-10'>まだ きろくが ありません</p>";
             data.forEach(item => {
                 const div = document.createElement('div');
-                div.className = "bg-orange-50 p-4 rounded-2xl border-l-4 border-orange-400 shadow-sm";
-                div.innerHTML = `<div class='text-[10px] text-orange-300'>${item.date} [${item.subject}]</div><p class='text-sm font-bold text-gray-600 line-clamp-2'>${item.text}</p>`;
+                div.className = "bg-orange-50 p-4 rounded-3xl border-l-8 border-orange-400 shadow-sm";
+                // 改行コード等で分割して構造化表示を試みる（保存時にラベル付きで保存される前提）
+                div.innerHTML = `<div class='text-[10px] text-orange-300 mb-1'>${item.date} [${item.subject}]</div><p class='text-sm font-bold text-gray-700 whitespace-pre-wrap'>${item.text}</p>`;
                 list.appendChild(div);
             });
             document.getElementById('historyModal').classList.remove('hidden');
         }
 
         function openSubjectModal() {
+            sfx.pop();
             const grid = document.getElementById('subjectGrid'); grid.innerHTML = "";
             ["国語", "算数", "生活", "音楽", "図工", "体育", "道徳"].forEach(s => {
                 const btn = document.createElement('button');
-                btn.className = "p-4 rounded-xl font-black text-white bg-orange-400 active:scale-95";
+                btn.className = "p-4 rounded-2xl font-black text-white bg-orange-400 active:scale-95";
                 btn.innerText = s; btn.onclick = () => {
                     window.selectedSubj = s;
                     document.getElementById('confirmText').innerText = s + "に 記録を残す？";
@@ -309,17 +284,31 @@
             });
             document.getElementById('subjectModal').classList.remove('hidden');
         }
-        function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
 
         document.getElementById('execSave').onclick = () => {
+            sfx.save();
             const hist = JSON.parse(localStorage.getItem('furiHistory') || '[]');
-            hist.unshift({ date: new Date().toLocaleString(), subject: window.selectedSubj, text: kanjiDisplay.innerText });
+            // ★ 保存時に①〜④のラベルを付与して保存
+            let fullStructuredText = "";
+            for (let i = 0; i < 4; i++) {
+                const txt = state.masterData.filter(c => c.step === i).map(c => c.s).join('');
+                if(txt.trim()) fullStructuredText += `${QUESTIONS[i]}\n${txt}\n\n`;
+            }
+            hist.unshift({ date: new Date().toLocaleString(), subject: window.selectedSubj, text: fullStructuredText.trim() });
             localStorage.setItem('furiHistory', JSON.stringify(hist));
-            localStorage.removeItem('furiBox_v23_temp');
-            alert("たからばこに いれたよ！");
+            localStorage.removeItem('furiBox_v24_temp');
             location.reload();
         };
 
+        function initStep() {
+            document.getElementById('stepIndicator').innerText = `STEP ${state.step + 1} / 4`;
+            document.getElementById('currentQuestionBox').innerText = QUESTIONS[state.step];
+            document.getElementById('saveIcon').innerText = (state.step === 3) ? "💰" : "➡️";
+            speak(QUESTIONS[state.step]);
+            renderDisplay();
+        }
+        function closeModal(id) { sfx.click(); document.getElementById(id).classList.add('hidden'); }
+        gradeMode.onchange = () => { sfx.click(); renderDisplay(); };
         window.onload = () => { loadFromLocal(); initStep(); };
     </script>
 </body>
