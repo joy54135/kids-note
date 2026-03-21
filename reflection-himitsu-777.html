@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>学びの足跡 v5.7</title>
+    <title>学びの足跡 v5.8</title>
     <script src="https://cdn.tailwindcss.com"></script>
     
     <script>
-        // --- 1. データ管理（保存キーを固定化） ---
+        // --- 1. データ管理 ---
         var GAS_URL = 'https://script.google.com/macros/s/AKfycbxxE14tNshFIqZHwzhyGQtRDeSazD9aPex9Tm0gIGJjmUvd8jAiFN-bkQyNIt_D9cV_/exec';
-        var STORAGE_KEY = 'manabi_takara_history_v1'; // 今後はこれに固定
+        var STORAGE_KEY = 'manabi_takara_history_v1';
         
         var appState = { 
             activeId: "", 
@@ -20,123 +20,103 @@
         var isRec = false;
         var selectedSubject = "";
         var EMOJI_LIST = ["🌸", "⭐", "🦖", "🚀", "🦄", "👑", "💎", "🎈", "🦁", "🐬", "🍭", "🎨", "⚽", "🌈", "✨"];
+        // 並び順を1枚目の画像と完全に一致させる
         var ALL_SUBJECTS = ["国語", "算数", "生活", "理科", "社会", "音楽", "図工", "体育", "道徳", "外国語"];
 
-        // --- 2. モーダル操作（エラーに強い設計） ---
-        function openModal(id) {
-            console.log("Opening modal:", id);
-            var m = document.getElementById(id);
-            if (!m) return;
-
-            // 画面を表示してから中身を作る（失敗しても画面は出るように）
-            m.style.display = 'flex';
-            m.style.pointerEvents = 'auto';
-            m.style.zIndex = "10000";
-
-            try {
-                if (id === 'subjectModal') renderSubjectGrid();
-                if (id === 'historyModal') renderHistorySubjects();
-            } catch (e) {
-                console.error("Modal content error:", e);
-                if (id === 'historyModal') {
-                    document.getElementById('historyList').innerHTML = "<p class='text-center py-10'>きろくの読み込みに しっぱいしました。一度やりなおしてみてね。</p>";
-                }
-            }
-        }
-
-        function closeModal(id) {
-            var m = document.getElementById(id);
-            if (m) m.style.display = 'none';
-        }
-
-        // --- 3. 履歴の描画（ここが反応なしの主な原因） ---
+        // --- 2. 履歴の描画（ここを修正：並び順を固定） ---
         function getHistory() {
             try {
                 var data = localStorage.getItem(STORAGE_KEY);
-                var parsed = data ? JSON.parse(data) : [];
-                return Array.isArray(parsed) ? parsed : [];
-            } catch (e) {
-                return [];
-            }
+                return data ? JSON.parse(data) : [];
+            } catch (e) { return []; }
         }
 
         function renderHistorySubjects() {
+            document.getElementById('historyTitle').innerText = "🎁 どの きょうかを みる？";
             var history = getHistory();
-            var historyTitle = document.getElementById('historyTitle');
             var list = document.getElementById('historyList');
             
-            historyTitle.innerText = "🎁 どの きょうかを みる？";
-
-            // 記録がある教科だけを抽出
-            var usedSubjects = [];
-            history.forEach(function(h) {
-                if (h.subject && usedSubjects.indexOf(h.subject) === -1) {
-                    usedSubjects.push(h.subject);
-                }
-            });
-
-            if (usedSubjects.length === 0) {
-                list.innerHTML = "<p class='text-center py-20 text-gray-400 font-bold text-2xl'>まだ きろくが ないよ</p>";
-                return;
-            }
-
+            // 全教科のボタンを保存時と同じ順序で作成
             list.innerHTML = `<div class="grid grid-cols-2 gap-4">` + 
-                usedSubjects.map(s => `
-                    <button onclick="viewHistoryBySubject('${s}')" 
-                    class="bg-orange-100 text-orange-600 p-8 rounded-3xl font-black text-3xl shadow-sm active:scale-95 border-4 border-white">${s}</button>
-                `).join('') + 
+                ALL_SUBJECTS.map(function(s) {
+                    // その教科の記録があるか確認
+                    var hasData = history.some(function(h) { return h.subject === s; });
+                    
+                    if (hasData) {
+                        // 記録がある場合：明るいオレンジ色のボタン
+                        return `<button onclick="viewHistoryBySubject('${s}')" 
+                            class="bg-orange-400 text-white p-6 rounded-2xl font-black text-2xl shadow-md active:scale-95 border-4 border-white">
+                            ${s}
+                            </button>`;
+                    } else {
+                        // 記録がない場合：薄いグレーのボタン（押し間違い防止のため）
+                        return `<button class="bg-gray-100 text-gray-300 p-6 rounded-2xl font-black text-2xl border-4 border-dashed border-gray-200 cursor-default opacity-60">
+                            ${s}
+                            </button>`;
+                    }
+                }).join('') + 
                 `</div>`;
         }
 
         function viewHistoryBySubject(subject) {
             document.getElementById('historyTitle').innerText = "🎁 " + subject + "の きろく";
             var history = getHistory();
-            var filtered = history.filter(h => h.subject === subject);
+            var filtered = history.filter(function(h) { return h.subject === subject; });
             var list = document.getElementById('historyList');
             
             list.innerHTML = `
                 <button onclick="renderHistorySubjects()" class="mb-6 text-orange-400 font-black text-xl flex items-center">
-                    <span class="mr-2">⬅️</span> きょうか選びに もどる
+                    <span class="mr-2">⬅️</span> もどる
                 </button>
-                ` + filtered.map(h => `
+                ` + filtered.map(function(h) { return `
                 <div class="bg-white border-4 border-orange-100 p-6 rounded-[2.5rem] mb-6 shadow-sm">
                     <div class="flex justify-between items-center mb-3">
                         <div class="text-xs text-orange-300 font-black">${h.date}</div>
                         <button onclick="loadHistoryToApp(${h.id})" class="bg-sky-400 text-white px-6 py-2 rounded-full text-sm font-black shadow-md active:scale-90">✎なおす</button>
                     </div>
                     <div class="space-y-2 text-lg font-black text-gray-700 leading-snug">
-                        <div class="border-b border-orange-50 pb-1">① ${h.fullData.t1.map(w=>w.surface).join('')}</div>
-                        <div class="border-b border-orange-50 pb-1">② ${h.fullData.t2.map(w=>w.surface).join('')}</div>
-                        <div class="border-b border-orange-50 pb-1">③ ${h.fullData.t3.map(w=>w.surface).join('')}</div>
-                        <div>④ ${h.fullData.t4.map(w=>w.surface).join('')}</div>
+                        <div class="border-b border-orange-50 pb-1">① ${h.fullData.t1.map(function(w){return w.surface;}).join('')}</div>
+                        <div class="border-b border-orange-50 pb-1">② ${h.fullData.t2.map(function(w){return w.surface;}).join('')}</div>
+                        <div class="border-b border-orange-50 pb-1">③ ${h.fullData.t3.map(function(w){return w.surface;}).join('')}</div>
+                        <div>④ ${h.fullData.t4.map(function(w){return w.surface;}).join('')}</div>
                     </div>
                     <div class="flex gap-3 mt-4 overflow-x-auto pb-2">
-                        ${h.fullData.photos.map(p => `<img src="${p}" class="w-24 h-24 object-cover rounded-2xl border-2 border-orange-50" onclick="viewPhoto('${p}')">`).join('')}
+                        ${h.fullData.photos.map(function(p){ return `<img src="${p}" class="w-24 h-24 object-cover rounded-2xl border-2 border-orange-50" onclick="viewPhoto('${p}')">`; }).join('')}
                     </div>
                 </div>
-            `).join('');
+            `; }).join('');
         }
 
-        // --- 4. 保存ロジック ---
+        // --- 3. 共通・保存・操作機能（v5.7継承） ---
+        function openModal(id) {
+            var m = document.getElementById(id);
+            if (!m) return;
+            m.style.display = 'flex'; m.style.pointerEvents = 'auto'; m.style.zIndex = "10000";
+            if (id === 'subjectModal') renderSubjectGrid();
+            if (id === 'historyModal') renderHistorySubjects();
+        }
+
+        function closeModal(id) { var m = document.getElementById(id); if (m) m.style.display = 'none'; }
+        
+        function renderSubjectGrid() {
+            var grid = document.getElementById('subjectGrid');
+            grid.innerHTML = ALL_SUBJECTS.map(s => `<button onclick="confirmSave('${s}')" class="bg-orange-400 text-white p-6 rounded-2xl font-black text-2xl shadow-md active:scale-95 z-[10001] relative">${s}</button>`).join('');
+        }
+
+        function confirmSave(subject) { selectedSubject = subject; closeModal('subjectModal'); document.getElementById('confirmText').innerText = subject + "に きろくする？"; openModal('confirmModal'); }
+        
         function executeSave() {
             var history = getHistory();
             if (appState.editingId) {
                 var index = history.findIndex(h => h.id === appState.editingId);
                 if (index !== -1) history[index].fullData = JSON.parse(JSON.stringify(appState.tiles));
             } else {
-                history.unshift({ 
-                    id: Date.now(), 
-                    date: new Date().toLocaleString('ja-JP'), 
-                    subject: selectedSubject, 
-                    fullData: JSON.parse(JSON.stringify(appState.tiles)) 
-                });
+                history.unshift({ id: Date.now(), date: new Date().toLocaleString('ja-JP'), subject: selectedSubject, fullData: JSON.parse(JSON.stringify(appState.tiles)) });
             }
             localStorage.setItem(STORAGE_KEY, JSON.stringify(history.slice(0, 30)));
-            alert('たからばこに いれたよ！');
-            location.reload();
+            alert('たからばこに いれたよ！'); location.reload();
         }
 
-        // --- 5. 基本機能（エディタ・写真・音声） ---
         function openEditor(id) {
             appState.activeId = id;
             var overlay = document.getElementById('editorOverlay');
@@ -185,7 +165,8 @@
                     img.onload = () => {
                         var canvas = document.createElement('canvas'); var max = 1000; var w = img.width, h = img.height;
                         if(w > h) { if(w > max){ h *= max/w; w = max; } } else { if(h > max){ w *= max/h; h = max; } }
-                        canvas.width = w; canvas.height = h; canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+                        canvas.width = w; canvas.height = h;
+                        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
                         appState.tiles.photos.push(canvas.toDataURL('image/jpeg', 0.7)); refreshTiles();
                     };
                     img.src = e.target.result;
@@ -198,16 +179,6 @@
         function deletePhoto(index) { if (confirm("この写真を けしますか？")) { appState.tiles.photos.splice(index, 1); refreshTiles(); } }
         function viewPhoto(src) { document.getElementById('fullPhoto').src = src; document.getElementById('photoViewer').style.display = 'flex'; }
         function closePhoto() { document.getElementById('photoViewer').style.display = 'none'; }
-        function renderSubjectGrid() {
-            document.getElementById('subjectGrid').innerHTML = ALL_SUBJECTS.map(s => `<button onclick="confirmSave('${s}')" class="bg-orange-400 text-white p-6 rounded-2xl font-black text-2xl shadow-md active:scale-95 z-[10001] relative">${s}</button>`).join('');
-        }
-        function confirmSave(subject) { selectedSubject = subject; closeModal('subjectModal'); document.getElementById('confirmText').innerText = subject + "に きろくする？"; openModal('confirmModal'); }
-        function loadHistoryToApp(historyId) {
-            if(!confirm("この きろくを なおしますか？")) return;
-            var history = getHistory();
-            var target = history.find(h => h.id === historyId);
-            if(target) { appState.tiles = JSON.parse(JSON.stringify(target.fullData)); appState.editingId = historyId; refreshTiles(); closeModal('historyModal'); document.getElementById('saveBtnLabel').innerText = "なおして ほぞんする 💰"; }
-        }
 
         // 音声認識
         var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -222,7 +193,7 @@
             try {
                 var res = await fetch(GAS_URL + '?text=' + encodeURIComponent(text));
                 var d = await res.json();
-                if(d.words_all) { appData = appState.tiles[appState.activeId]; appState.tiles[appState.activeId] = appData.concat(d.words_all); renderEditor(); }
+                if(d.words_all) { appState.tiles[appState.activeId] = appState.tiles[appState.activeId].concat(d.words_all); renderEditor(); }
             } catch(e) {}
         }
         function renderEditor() {
@@ -259,7 +230,7 @@
 <body class="select-none">
 
     <div class="px-4 pt-4 flex justify-between items-center shrink-0">
-        <button onclick="openModal('historyModal')" class="bg-white border-2 border-orange-200 rounded-full px-5 py-2 text-sm font-black text-orange-400 active:scale-90">🎁 きろくをみる</button>
+        <button onclick="openModal('historyModal')" class="bg-white border-2 border-orange-200 rounded-full px-5 py-2 text-sm font-black text-orange-400 active:scale-90 shadow-sm">🎁 きろくをみる</button>
         <h1 class="text-2xl font-black text-orange-400 tracking-tighter">学びの足跡</h1>
         <div class="w-20"></div>
     </div>
@@ -281,16 +252,16 @@
     </div>
 
     <div id="subjectModal" class="modal-bg" onclick="if(event.target===this) closeModal('subjectModal')">
-        <div class="bg-white rounded-[3rem] p-8 w-full max-w-lg modal-content border-8 border-orange-100 text-center">
+        <div class="bg-white rounded-[3rem] p-8 w-full max-w-lg modal-content border-8 border-orange-100 shadow-2xl text-center">
             <h2 class="text-3xl font-black text-orange-400 mb-8">どの きょうか？</h2>
             <div id="subjectGrid" class="grid grid-cols-2 gap-4 mb-6"></div>
-            <button onclick="closeModal('subjectModal')" class="text-gray-400 font-bold text-xl">やめる</button>
+            <button onclick="closeModal('subjectModal')" class="text-gray-400 font-bold text-xl text-center">やめる</button>
         </div>
     </div>
 
     <div id="historyModal" class="modal-bg" onclick="if(event.target===this) closeModal('historyModal')">
-        <div class="bg-amber-50 rounded-[3rem] p-8 w-full max-w-2xl h-[85vh] modal-content flex flex-col border-8 border-white">
-            <h2 id="historyTitle" class="text-3xl font-black text-orange-400 mb-6 text-center">🎁 きろく</h2>
+        <div class="bg-amber-50 rounded-[3rem] p-8 w-full max-w-2xl h-[85vh] modal-content flex flex-col border-8 border-white shadow-2xl">
+            <h2 id="historyTitle" class="text-3xl font-black text-orange-400 mb-6 text-center italic">🎁 きろく</h2>
             <div id="historyList" class="flex-1 overflow-y-auto"></div>
             <button onclick="closeModal('historyModal')" class="w-full mt-6 bg-orange-400 text-white py-5 rounded-[2rem] font-black text-2xl">とじる</button>
         </div>
@@ -301,7 +272,7 @@
             <p id="confirmText" class="text-3xl font-black text-gray-700 mb-10"></p>
             <div class="flex gap-4">
                 <button onclick="closeModal('confirmModal')" class="flex-1 bg-gray-100 py-5 rounded-2xl font-black text-gray-400 text-xl">いいえ</button>
-                <button onclick="executeSave()" class="flex-1 bg-orange-500 py-5 rounded-2xl font-black text-white text-xl">はい！</button>
+                <button onclick="executeSave()" class="flex-1 bg-orange-500 py-5 rounded-2xl font-black text-white text-xl shadow-lg">はい！</button>
             </div>
         </div>
     </div>
