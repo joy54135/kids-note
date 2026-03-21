@@ -3,13 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>学びの足跡 v9.4</title>
+    <title>学びの足跡 v9.5</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { height: 100dvh; background-color: #fffbeb; margin: 0; display: flex; flex-direction: column; overflow: hidden; font-family: sans-serif; }
-        .main-container { flex: 1; display: flex; flex-direction: column; padding: 1rem; gap: 0.8rem; min-height: 0; }
+        .main-container { flex: 1; display: flex; flex-direction: column; padding: 1rem; gap: 0.8rem; min-height: 0; transition: all 0.6s cubic-bezier(0.6, -0.28, 0.735, 0.045); }
         
-        /* メインタイルのグリッド定義 */
+        /* 吸い込まれるアニメーション用クラス */
+        .suck-in { transform: scale(0) rotate(15deg); opacity: 0; pointer-events: none; }
+
         .tiles-grid { 
             flex: 1; 
             display: grid; 
@@ -23,7 +25,7 @@
         .tile-btn:active { background: #fff7ed; transform: scale(0.98); }
         .tile-preview { flex: 1; color: #4b5563; font-weight: 900; overflow: hidden; font-size: 1.3rem; line-height: 1.2; word-break: break-all; margin-top: 0.2rem; }
         
-        /* 枠線の色 */
+        /* 枠線の色定義 */
         .border-blue { border-color: #bae6fd !important; }
         .border-green { border-color: #d9f99d !important; }
         .border-orange { border-color: #ffedd5 !important; }
@@ -35,21 +37,15 @@
         #editorOverlay { position: fixed; inset: 0; background-color: #fffbeb; z-index: 999999; display: none; flex-direction: column; padding: 1.2rem; }
         #editorOverlay.active { display: flex; }
         
-        /* エディタ下部ボタン：高さを統一 */
         .editor-bottom-nav { 
             display: grid; 
             grid-template-columns: 0.7fr 0.7fr 1.8fr 1.2fr; 
             gap: 0.6rem; 
-            align-items: stretch; /* 高さを揃える */
+            align-items: stretch;
             margin-top: 1.5rem;
-            min-height: 120px; /* 全体の高さを確保 */
+            min-height: 110px;
         }
-        .editor-bottom-nav button {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
-        }
+        .editor-bottom-nav button { display: flex; align-items: center; justify-content: center; height: 100%; }
 
         .modal-bg { position: fixed; inset: 0; display: none; flex-direction: column; padding: 1.2rem; z-index: 888888; background-color: rgba(0,0,0,0.8); backdrop-filter: blur(10px); justify-content: center; align-items: center; }
         .modal-bg.active { display: flex; }
@@ -57,7 +53,7 @@
         
         .history-card { background: white; border: 8px solid #ffedd5; border-radius: 3rem; padding: 1.5rem; margin-bottom: 2rem; position: relative; }
         .mini-tiles-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.6rem; margin-top: 1rem; }
-        .mini-tile { background: #fffaf0; border: 2px solid #ffedd5; border-radius: 1.2rem; padding: 0.8rem; min-height: 80px; position: relative; }
+        .mini-tile { background: #fffaf0; border: 4px solid #ffedd5; border-radius: 1.2rem; padding: 0.8rem; min-height: 80px; position: relative; }
         .mini-tile-full { grid-column: span 2; min-height: 60px; }
 
         input { border: 4px solid #fed7aa; border-radius: 1.5rem; padding: 1rem; width: 100%; font-size: 1.5rem; font-weight: 900; text-align: center; outline: none; margin-bottom: 1rem; }
@@ -77,7 +73,7 @@
         .photo-img-main { width: 100%; height: 100%; object-fit: cover; }
         .delete-btn { position: absolute; top: 4px; right: 4px; background: #ef4444; color: white; width: 24px; height: 24px; border-radius: 50%; font-weight: bold; border: 2px solid white; z-index: 50; display: flex; align-items: center; justify-content: center; }
 
-        .mic-recording { animation: mic-pulse 1.5s infinite; background-color: #ef4444 !important; border-bottom-color: #b91c1c !important; }
+        .mic-recording { animation: mic-pulse 1.5s infinite; background-color: #ef4444 !important; border-bottom: 8px solid #b91c1c !important; }
         @keyframes mic-pulse { 0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); } 70% { box-shadow: 0 0 0 20px rgba(239, 68, 68, 0); } 100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); } }
         @keyframes pop-bounce { 0% { transform: scale(0); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
         
@@ -91,6 +87,24 @@
         const AUTH_KEY = 'manabi_auth_info';
         const TEACHER_CODE = "702070";
         const GAS_URL = 'https://script.google.com/macros/s/AKfycbxxE14tNshFIqZHwzhyGQtRDeSazD9aPex9Tm0gIGJjmUvd8jAiFN-bkQyNIt_D9cV_/exec';
+
+        // 効果音（チャイム音）の生成
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        function playSaveSfx() {
+            const freqs = [523.25, 659.25, 783.99, 1046.50, 1318.51, 1567.98]; // C5, E5, G5, C6, E6, G6
+            freqs.forEach((f, i) => {
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(f, audioCtx.currentTime + (i * 0.08));
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime + (i * 0.08));
+                gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + (i * 0.08) + 0.5);
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+                osc.start(audioCtx.currentTime + (i * 0.08));
+                osc.stop(audioCtx.currentTime + (i * 0.08) + 0.5);
+            });
+        }
 
         const KANJI_LISTS = {
             1: "一右雨円王音下火花貝学気九休玉金空月犬見五口校左三山子四糸字耳七車手十出女小上森人水正生青夕石赤千川先早草足村大男竹中虫町天田土二日入年白八百文木本名目立力林六",
@@ -307,21 +321,28 @@
         }
 
         function executeFinalSave(subject) {
-            const h = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-            if(appState.editingId) { 
-                const idx = h.findIndex(x => x.id === appState.editingId); 
-                if(idx !== -1) { 
-                    h[idx].fullData = JSON.parse(JSON.stringify(appState.tiles)); 
-                    h[idx].badges = JSON.parse(JSON.stringify(appState.badges)); 
+            // 吸い込みアニメーションと音を鳴らす
+            playSaveSfx();
+            const main = document.getElementById('mainContainer');
+            main.classList.add('suck-in');
+
+            setTimeout(() => {
+                const h = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+                if(appState.editingId) { 
+                    const idx = h.findIndex(x => x.id === appState.editingId); 
+                    if(idx !== -1) { 
+                        h[idx].fullData = JSON.parse(JSON.stringify(appState.tiles)); 
+                        h[idx].badges = JSON.parse(JSON.stringify(appState.badges)); 
+                    }
+                } else {
+                    const entry = { id: Date.now(), date: new Date().toLocaleString('ja-JP'), subject: subject || "国語", fullData: JSON.parse(JSON.stringify(appState.tiles)), badges: JSON.parse(JSON.stringify(appState.badges)), user: appState.user };
+                    h.unshift(entry);
                 }
-            } else {
-                const entry = { id: Date.now(), date: new Date().toLocaleString('ja-JP'), subject: subject || "国語", fullData: JSON.parse(JSON.stringify(appState.tiles)), badges: JSON.parse(JSON.stringify(appState.badges)), user: appState.user };
-                h.unshift(entry);
-            }
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(h.slice(0, 50)));
-            alert(convertUI("保存しました！", appState.gradeMode));
-            resetAll(true);
-            closeModal('subjectModal');
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(h.slice(0, 50)));
+                resetAll(true);
+                main.classList.remove('suck-in');
+                closeModal('subjectModal');
+            }, 650);
         }
 
         function executeDeletion() { 
@@ -332,13 +353,18 @@
         }
 
         function resetAll(silent) {
-            if(silent || confirm("ぜんぶ消しますか？")) {
-                appState.tiles = { t1: [], t2: [], t3: [], t4: [], photos: [] };
-                appState.badges = { t1: "", t2: "", t3: "", t4: "" };
-                if (appState.editingId && silent !== true) { appState.isDeleteMode = true; document.getElementById('saveBtnContainer').style.backgroundColor = "#ef4444"; } 
-                else { appState.editingId = null; appState.isDeleteMode = false; document.getElementById('saveBtnContainer').style.backgroundColor = "#fb923c"; }
-                refreshMainView();
+            appState.tiles = { t1: [], t2: [], t3: [], t4: [], photos: [] };
+            appState.badges = { t1: "", t2: "", t3: "", t4: "" };
+            if (!silent && appState.editingId) { 
+                appState.isDeleteMode = true; 
+                document.getElementById('saveBtnContainer').style.backgroundColor = "#ef4444"; 
+            } 
+            else { 
+                appState.editingId = null; 
+                appState.isDeleteMode = false; 
+                document.getElementById('saveBtnContainer').style.backgroundColor = "#fb923c"; 
             }
+            refreshMainView();
         }
 
         function openModal(id) {
@@ -367,13 +393,37 @@
             const list = document.getElementById('historyList');
             document.getElementById('historyTitle').innerText = convertUI(subject, lv) + "の きろく";
             list.innerHTML = h.length ? "" : "<p class='text-center mt-10 text-gray-400'>きろくがありません</p>";
+            
             h.forEach(item => {
                 const div = document.createElement('div');
                 div.className = "history-card";
                 const data = item.fullData;
                 const badges = item.badges || {};
-                const createMiniTile = (title, key, isFull) => `<div class="mini-tile ${isFull?'mini-tile-full':''}"><div class="text-[10px] text-orange-400 font-bold">${convertUI(title, lv)}</div><div class="text-xs font-black text-gray-700 mt-1">${(data[key]||[]).map(w=>convertWord(w, lv)).join('')}</div><div class="mini-badge">${badges[key]||''}</div></div>`;
-                div.innerHTML = `<div class="flex justify-between items-center mb-2 px-2"><span class="bg-orange-400 text-white px-3 py-1 rounded-full text-xs font-bold">${convertUI(item.subject, lv)}</span><span class="text-[10px] text-gray-400 font-bold">${item.date}</span></div><div class="mini-tiles-grid">${createMiniTile('今日のめあて', 't1', true)}${createMiniTile('できたこと', 't2', false)}${createMiniTile('むずかしかった', 't3', false)}${createMiniTile('つぎのこと', 't4', true)}</div><div class="mt-3 bg-white border-2 border-orange-100 rounded-xl p-1 flex gap-2 overflow-x-auto">${(data.photos||[]).map(src => `<img src="${src}" class="h-14 w-14 object-cover rounded-lg" onclick="viewPhoto('${src}')">`).join('')}</div><button onclick="loadToApp(${item.id}); closeModal('historyListModal');" class="w-full mt-4 bg-orange-400 text-white py-3 rounded-2xl font-black text-lg shadow-md active:scale-95 transition-all">✎ ${convertUI('なおす', lv)}</button>`;
+
+                // 枠線の色をメイン画面と統一：blue, orange, orange, green
+                const createMiniTile = (title, key, isFull, borderCls) => `
+                    <div class="mini-tile ${isFull?'mini-tile-full':''} ${borderCls}">
+                        <div class="text-[10px] text-orange-400 font-bold">${convertUI(title, lv)}</div>
+                        <div class="text-xs font-black text-gray-700 mt-1">${(data[key]||[]).map(w=>convertWord(w, lv)).join('')}</div>
+                        <div class="mini-badge">${badges[key]||''}</div>
+                    </div>`;
+
+                div.innerHTML = `
+                    <div class="flex justify-between items-center mb-2 px-2">
+                        <span class="bg-orange-400 text-white px-3 py-1 rounded-full text-xs font-bold">${convertUI(item.subject, lv)}</span>
+                        <span class="text-[10px] text-gray-400 font-bold">${item.date}</span>
+                    </div>
+                    <div class="mini-tiles-grid">
+                        ${createMiniTile('今日のめあて', 't1', true, 'border-blue')}
+                        ${createMiniTile('できたこと', 't2', false, 'border-orange')}
+                        ${createMiniTile('むずかしかった', 't3', false, 'border-orange')}
+                        ${createMiniTile('つぎのこと', 't4', true, 'border-green')}
+                    </div>
+                    <div class="mt-3 bg-white border-2 border-orange-100 rounded-xl p-1 flex gap-2 overflow-x-auto">
+                        ${(data.photos||[]).map(src => `<img src="${src}" class="h-14 w-14 object-cover rounded-lg" onclick="viewPhoto('${src}')">`).join('')}
+                    </div>
+                    <button onclick="loadToApp(${item.id}); closeModal('historyListModal');" class="w-full mt-4 bg-orange-400 text-white py-3 rounded-2xl font-black text-lg shadow-md active:scale-95">✎ ${convertUI('なおす', lv)}</button>
+                `;
                 list.appendChild(div);
             });
             closeModal('historySubjectModal');
@@ -383,7 +433,14 @@
         function loadToApp(id) {
             const h = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
             const item = h.find(x => x.id === id);
-            if(item) { appState.tiles = JSON.parse(JSON.stringify(item.fullData)); appState.badges = JSON.parse(JSON.stringify(item.badges || {})); appState.editingId = id; appState.isDeleteMode = false; document.getElementById('saveBtnContainer').style.backgroundColor = "#38bdf8"; refreshMainView(); }
+            if(item) { 
+                appState.tiles = JSON.parse(JSON.stringify(item.fullData)); 
+                appState.badges = JSON.parse(JSON.stringify(item.badges || {})); 
+                appState.editingId = id; 
+                appState.isDeleteMode = false; 
+                document.getElementById('saveBtnContainer').style.backgroundColor = "#38bdf8"; 
+                refreshMainView(); 
+            }
         }
 
         async function handlePhotos(input) {
@@ -415,48 +472,50 @@
         </div>
     </div>
 
-    <div id="headerArea" class="px-4 pt-4 flex justify-between items-center shrink-0">
-        <button onclick="openModal('historySubjectModal')" class="bg-white border-2 border-orange-200 rounded-full px-4 py-2 shadow-sm active:scale-95 transition-all">
-            <span id="historyBtnLabel" class="text-xs font-black text-orange-400 italic">記録をみる</span>
-        </button>
-        <h1 id="appTitle" class="text-xl font-black text-orange-400 tracking-tighter text-center flex-1">学びの足跡</h1>
-        <button onclick="openModal('settingsModal')" class="bg-orange-100 border border-orange-200 rounded-full w-10 h-10 flex items-center justify-center text-xl shadow-sm active:scale-95 transition-all">⚙️</button>
-    </div>
-
-    <div id="mainContentArea" class="main-container">
-        <div class="tiles-grid">
-            <button class="tile-btn col-span-2 border-blue" onclick="openEditor('t1')">
-                <div data-label="今日のめあて" class="text-sky-400 font-black text-xs"></div>
-                <div id="p-t1" class="tile-preview"></div>
-                <div id="badge-t1" class="badge" style="display:none;"></div>
+    <div id="mainContainer" class="main-container">
+        <div id="headerArea" class="pt-4 flex justify-between items-center shrink-0">
+            <button onclick="openModal('historySubjectModal')" class="bg-white border-2 border-orange-200 rounded-full px-4 py-2 shadow-sm active:scale-95 transition-all">
+                <span id="historyBtnLabel" class="text-xs font-black text-orange-400 italic">記録をみる</span>
             </button>
-            <button class="tile-btn border-orange" onclick="openEditor('t2')">
-                <div data-label="できたこと、うまくいったこと" class="text-orange-400 font-black text-[10px] leading-tight"></div>
-                <div id="p-t2" class="tile-preview"></div>
-                <div id="badge-t2" class="badge" style="display:none;"></div>
-            </button>
-            <button class="tile-btn border-orange" onclick="openEditor('t3')">
-                <div data-label="むずかしかったこと、うまくいかなかったこと" class="text-orange-400 font-black text-[10px] leading-tight"></div>
-                <div id="p-t3" class="tile-preview"></div>
-                <div id="badge-t3" class="badge" style="display:none;"></div>
-            </button>
-            <button class="tile-btn col-span-2 border-green" onclick="openEditor('t4')">
-                <div data-label="つぎのこと" class="text-lime-500 font-black text-xs"></div>
-                <div id="p-t4" class="tile-preview"></div>
-                <div id="badge-t4" class="badge" style="display:none;"></div>
-            </button>
-            <button class="tile-btn col-span-2" onclick="document.getElementById('fileInput').click()">
-                <div data-label="しゃしん" class="text-orange-400 font-black text-xs"></div>
-                <div id="photoLabelInner" class="absolute top-4 right-4 text-[10px] text-orange-300">0 / 2枚</div>
-                <div id="photoGrid" class="photo-grid-mini h-full"></div>
-                <input type="file" id="fileInput" accept="image/*" multiple style="display:none;" onchange="handlePhotos(this)">
-            </button>
+            <h1 id="appTitle" class="text-xl font-black text-orange-400 tracking-tighter text-center flex-1">学びの足跡</h1>
+            <button onclick="openModal('settingsModal')" class="bg-orange-100 border border-orange-200 rounded-full w-10 h-10 flex items-center justify-center text-xl shadow-sm active:scale-95 transition-all">⚙️</button>
         </div>
-        <div class="flex gap-4">
-            <button onclick="resetAll()" data-label="全部消す" class="flex-1 bg-red-400 text-white rounded-[2rem] py-5 font-black text-2xl shadow-xl border-b-8 border-red-600 active:scale-95 transition-all">全部消す</button>
-            <button id="saveBtnContainer" onclick="startSaveProcess()" class="flex-[2] bg-orange-400 text-white rounded-[2rem] py-5 font-black text-2xl shadow-xl border-b-8 border-orange-600 active:scale-95 transition-all">
-                <span id="saveBtnLabel" data-label="ぜんぶ ほぞんする 💎"></span>
-            </button>
+
+        <div id="mainContentArea" class="flex-1 flex flex-col gap-3 min-height-0">
+            <div class="tiles-grid">
+                <button class="tile-btn col-span-2 border-blue" onclick="openEditor('t1')">
+                    <div data-label="今日のめあて" class="text-sky-400 font-black text-xs"></div>
+                    <div id="p-t1" class="tile-preview"></div>
+                    <div id="badge-t1" class="badge" style="display:none;"></div>
+                </button>
+                <button class="tile-btn border-orange" onclick="openEditor('t2')">
+                    <div data-label="できたこと、うまくいったこと" class="text-orange-400 font-black text-[10px] leading-tight"></div>
+                    <div id="p-t2" class="tile-preview"></div>
+                    <div id="badge-t2" class="badge" style="display:none;"></div>
+                </button>
+                <button class="tile-btn border-orange" onclick="openEditor('t3')">
+                    <div data-label="むずかしかったこと、うまくいかなかったこと" class="text-orange-400 font-black text-[10px] leading-tight"></div>
+                    <div id="p-t3" class="tile-preview"></div>
+                    <div id="badge-t3" class="badge" style="display:none;"></div>
+                </button>
+                <button class="tile-btn col-span-2 border-green" onclick="openEditor('t4')">
+                    <div data-label="つぎのこと" class="text-lime-500 font-black text-xs"></div>
+                    <div id="p-t4" class="tile-preview"></div>
+                    <div id="badge-t4" class="badge" style="display:none;"></div>
+                </button>
+                <button class="tile-btn col-span-2" onclick="document.getElementById('fileInput').click()">
+                    <div data-label="しゃしん" class="text-orange-400 font-black text-xs"></div>
+                    <div id="photoLabelInner" class="absolute top-4 right-4 text-[10px] text-orange-300">0 / 2枚</div>
+                    <div id="photoGrid" class="photo-grid-mini h-full"></div>
+                    <input type="file" id="fileInput" accept="image/*" multiple style="display:none;" onchange="handlePhotos(this)">
+                </button>
+            </div>
+            <div class="flex gap-4">
+                <button onclick="resetAll()" data-label="全部消す" class="flex-1 bg-red-400 text-white rounded-[2rem] py-5 font-black text-2xl shadow-xl border-b-8 border-red-600 active:scale-95 transition-all">全部消す</button>
+                <button id="saveBtnContainer" onclick="startSaveProcess()" class="flex-[2] bg-orange-400 text-white rounded-[2rem] py-5 font-black text-2xl shadow-xl border-b-8 border-orange-600 active:scale-95 transition-all">
+                    <span id="saveBtnLabel" data-label="ぜんぶ ほぞんする 💎"></span>
+                </button>
+            </div>
         </div>
     </div>
 
@@ -474,21 +533,17 @@
             <div id="richDisplay" contenteditable="true" spellcheck="false" oninput="syncEditorToState()"></div>
         </div>
         
-        <!-- 下部ボタン：高さを統一し、1字消すの色を変更 -->
         <div class="editor-bottom-nav">
-            <button onclick="document.getElementById('richDisplay').innerText = ''; syncEditorToState();" data-label="全部消す" class="bg-zinc-200 rounded-[1.5rem] py-3 text-zinc-500 font-black text-xs btn-active-state">全部<br>消す</button>
-            
-            <button onclick="deleteOneChar()" data-label="1字消す" class="bg-blue-100 rounded-[1.5rem] py-3 text-blue-500 font-black text-xs btn-active-state">1字<br>消す</button>
-            
+            <button onclick="document.getElementById('richDisplay').innerText = ''; syncEditorToState();" data-label="全部消す" class="bg-zinc-200 rounded-[1.5rem] py-3 text-zinc-500 font-black text-xs btn-active-state">全部消す</button>
+            <button onclick="deleteOneChar()" data-label="1字消す" class="bg-blue-100 rounded-[1.5rem] py-3 text-blue-500 font-black text-xs btn-active-state">1字消す</button>
             <button id="micBtn" onclick="handleMicAction()" class="bg-sky-500 rounded-[2rem] py-8 text-white font-black text-4xl shadow-lg border-b-8 border-sky-700 btn-active-state">
                 <span id="micLabel" data-label="話す"></span>
             </button>
-            
             <button onclick="closeEditor(true)" data-label="決定" class="bg-orange-500 rounded-[2rem] py-6 text-white font-black text-2xl shadow-md border-b-4 border-orange-700 btn-active-state">決定</button>
         </div>
     </div>
 
-    <!-- モーダル各種 -->
+    <!-- 各種モーダル -->
     <div id="settingsModal" class="modal-bg" onclick="if(event.target===this) closeModal('settingsModal')">
         <div class="modal-content text-center shadow-2xl">
             <h2 data-label="どの 学年？" class="text-2xl font-black text-orange-400 mb-6 italic"></h2>
