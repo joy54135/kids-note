@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ひらがな めがね Ver.4.0</title>
+    <title>ひらがな めがね Ver.5.0</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* ひらがなカードが弾むアニメーション */
+        /* ひらがなカード出現アニメーション */
         @keyframes pop {
             0% { transform: scale(0.5) rotate(-5deg); opacity: 0; }
             70% { transform: scale(1.1) rotate(2deg); }
@@ -14,7 +14,7 @@
         }
         .word-card { animation: pop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
         
-        /* 録音中の赤い波紋 */
+        /* 録音中の脈動エフェクト */
         .pulse-red { animation: pulse 1.5s infinite; }
         @keyframes pulse {
             0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
@@ -25,25 +25,25 @@
 </head>
 <body class="bg-[#FFFDF0] h-screen flex flex-col items-center justify-between p-6 overflow-hidden select-none">
 
-    <h1 class="text-3xl font-black text-orange-400 mt-4 tracking-widest">ひらがな めがね</h1>
+    <h1 class="text-3xl font-black text-orange-400 mt-4 tracking-tighter">ひらがな めがね</h1>
 
     <div id="display-container" class="flex-1 w-full flex flex-col items-center justify-center">
         <div id="display" class="flex flex-wrap justify-center gap-4 w-full content-center text-center">
             <p id="msg" class="text-2xl text-orange-300 font-bold px-4">したの ボタンを おしてね</p>
         </div>
-        <div id="status-bar" class="mt-4 text-xs font-mono text-gray-400"></div>
+        <div id="status-bar" class="mt-4 text-[10px] font-mono text-gray-400 h-4"></div>
     </div>
 
     <div class="mb-12 relative flex flex-col items-center">
         <button id="micBtn" class="w-44 h-44 bg-sky-400 border-[12px] border-sky-100 rounded-full shadow-2xl flex items-center justify-center active:scale-90 transition-all outline-none">
             <span id="btnLabel" class="text-white text-3xl font-black italic">おしてね</span>
         </button>
-        <div id="error-log" class="absolute -bottom-8 text-xs text-red-400 font-bold whitespace-nowrap"></div>
+        <div id="error-log" class="absolute -bottom-10 text-[10px] text-red-400 font-bold text-center w-64 leading-tight"></div>
     </div>
 
     <script>
-        // --- 設定 (ここを書き換えてください) ---
-        const GAS_URL = 'https://script.google.com/macros/s/AKfycbxtAeXcLqUk7UukAAUeEZ15CcrtkKPhyfVqp8u20cpaEYQAY-7S2cDD1Ls2m5XzrAnu/exec';
+        // --- 設定エリア ---
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbyvjPK0OKFMw-IyPcT4KPk5O2AH5UEwhm-gObdRCxpxy1FuaNIp8lw_fx8BR8ZBREqH/exec';
         
         const sounds = {
             start: new Audio('https://assets.mixkit.co/active_storage/sfx/2571/2571-preview.mp3'),
@@ -66,36 +66,36 @@
         } else {
             const recognition = new SpeechRecognition();
             recognition.lang = 'ja-JP';
-            recognition.interimResults = true; // 途中の言葉も表示して「反応してる感」を出す
+            recognition.interimResults = true; // リアルタイムで文字を表示
             recognition.continuous = false;
 
             micBtn.onclick = () => {
                 if (isDebouncing) return;
                 isDebouncing = true;
-                setTimeout(() => { isDebouncing = false; }, 600);
+                setTimeout(() => { isDebouncing = false; }, 600); // 連打防止
 
                 if (!isRunning) {
-                    startProcess();
+                    startRecognition();
                 } else {
-                    stopProcess();
+                    stopRecognition();
                 }
             };
 
-            function startProcess() {
+            function startRecognition() {
                 errorLog.innerText = "";
-                statusBar.innerText = "マイクを 準備中...";
+                statusBar.innerText = "マイク 準備中...";
                 sounds.start.play().catch(() => {});
                 try {
                     recognition.start();
                 } catch(e) {
-                    errorLog.innerText = "エラー: もう一度おしてね";
+                    errorLog.innerText = "起動エラー。もう一度押してね。";
                 }
             }
 
-            function stopProcess() {
+            function stopRecognition() {
                 sounds.stop.play().catch(() => {});
                 recognition.stop();
-                btnLabel.innerText = "おわり";
+                btnLabel.innerText = "解析中...";
             }
 
             recognition.onstart = () => {
@@ -103,20 +103,19 @@
                 micBtn.classList.add('bg-red-500', 'border-red-200', 'pulse-red');
                 micBtn.classList.remove('bg-sky-400', 'border-sky-100');
                 btnLabel.innerText = "おわる";
-                msg.innerText = "なにか はなしてみてね！";
-                statusBar.innerText = "きいています...";
+                msg.innerText = "はなしてみてね！";
+                statusBar.innerText = "音声をききとっています...";
             };
 
             recognition.onresult = (event) => {
                 const transcript = event.results[0][0].transcript;
                 const isFinal = event.results[0].isFinal;
                 
-                // 途中経過をリアルタイム表示
-                msg.innerText = "「" + transcript + "」...";
+                // 聞き取っている最中の文字を表示
+                msg.innerText = "「" + transcript + "」";
                 
                 if (isFinal) {
-                    msg.innerText = "「" + transcript + "」を ひらがなにするよ...";
-                    statusBar.innerText = "GASへ 送信中...";
+                    msg.innerText = "「" + transcript + "」を ひらがなに 変換中...";
                     sendToGas(transcript);
                 }
             };
@@ -124,11 +123,9 @@
             recognition.onerror = (event) => {
                 isRunning = false;
                 if (event.error === 'no-speech') {
-                    errorLog.innerText = "こえが きこえなかったよ";
-                } else if (event.error === 'aborted') {
-                    // 何もしない（手動停止時に出るため）
-                } else {
-                    errorLog.innerText = "エラー: " + event.error;
+                    errorLog.innerText = "声が聞こえませんでした";
+                } else if (event.error !== 'aborted') {
+                    errorLog.innerText = "マイクエラー: " + event.error;
                 }
             };
 
@@ -145,22 +142,25 @@
         }
 
         async function sendToGas(text) {
+            statusBar.innerText = "GASへ送信中...";
             try {
                 const targetUrl = `${GAS_URL}?text=${encodeURIComponent(text)}`;
                 const res = await fetch(targetUrl);
                 const data = await res.json();
                 
                 if (data.words) {
-                    statusBar.innerText = "ひらがな 成功！";
+                    statusBar.innerText = "受信成功";
                     renderWords(data.words);
                     sounds.success.play().catch(() => {});
                     msg.innerText = "";
-                } else {
-                    statusBar.innerText = "GASの 返信エラー";
+                } else if (data.error) {
+                    statusBar.innerText = "APIエラー";
+                    errorLog.innerText = data.error;
+                    msg.innerText = "エラーが おきたよ";
                 }
             } catch (e) {
-                statusBar.innerText = "通信エラー: " + e.message;
-                errorLog.innerText = "ネットが つながらないよ";
+                statusBar.innerText = "通信失敗";
+                errorLog.innerText = "ネットワークまたはURLを確認してください: " + e.message;
             }
         }
 
