@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>学びの足跡 v10.8</title>
+    <title>学びの足跡 v10.9</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { height: 100dvh; background-color: #fffbeb; margin: 0; display: flex; flex-direction: column; overflow: hidden; font-family: sans-serif; }
@@ -14,10 +14,8 @@
             transition: all 0.7s cubic-bezier(0.6, -0.28, 0.735, 0.045); 
             transform-origin: left top; 
         }
-        /* 吸い込まれる状態：左上へ移動しつつ消える */
         .suck-in { transform: scale(0) translate(-30%, -30%) rotate(-15deg); opacity: 0; pointer-events: none; }
 
-        /* タイルグリッド：1画面に収まるよう配分 */
         .tiles-grid { 
             flex: 1; 
             display: grid; 
@@ -37,25 +35,21 @@
         .border-green { border-color: #d9f99d !important; }
         .border-orange { border-color: #ffedd5 !important; }
 
-        /* ログイン・登録画面 */
         #authOverlay { position: fixed; inset: 0; background-color: #fb923c; z-index: 1000000; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 2rem; }
         #authOverlay.active { display: flex; }
         .auth-card { background: white; border-radius: 3rem; padding: 2.5rem; width: 100%; max-width: 26rem; text-align: center; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
         
         input { border: 4px solid #fed7aa; border-radius: 1.5rem; padding: 1.6rem 1rem; width: 100%; font-size: 1.5rem; font-weight: 900; text-align: center; outline: none; margin-bottom: 1.2rem; line-height: 1; }
         
-        /* 編集画面（iPadキーボード対応） */
         #editorOverlay { position: fixed; top: 0; left: 0; width: 100%; background-color: #fffbeb; z-index: 999999; display: none; flex-direction: column; padding: 1.2rem; overflow: hidden; }
         #editorOverlay.active { display: flex; }
         
         .editor-bottom-nav { display: grid; grid-template-columns: 0.7fr 0.7fr 1.8fr 1.2fr; gap: 0.6rem; align-items: stretch; margin-top: 1rem; min-height: 100px; flex-shrink: 0; }
         .editor-bottom-nav button { display: flex; align-items: center; justify-content: center; height: 100%; }
 
-        /* モーダル */
         .modal-bg { position: fixed; inset: 0; display: none; flex-direction: column; padding: 1.2rem; z-index: 888888; background-color: rgba(0,0,0,0.8); backdrop-filter: blur(10px); justify-content: center; align-items: center; }
         .modal-bg.active { display: flex; }
         
-        /* 履歴リスト */
         .modal-content-wide { background: #fffbeb; border-radius: 3rem; padding: 1rem; width: 96%; max-width: 75rem; border: 8px solid #ffedd5; position: relative; max-height: 94vh; display: flex; flex-direction: column; }
         .modal-content { background: white; border-radius: 3rem; padding: 2rem; width: 100%; max-width: 32rem; border: 8px solid #ffedd5; position: relative; max-height: 90vh; overflow-y: auto; }
         
@@ -70,7 +64,6 @@
         #richDisplay { flex: 1; background: white; border: 4px solid #ffedd5; border-radius: 2.5rem; padding: 1.5rem; font-size: 2.2rem; font-weight: 900; outline: none; overflow-y: auto; color: #374151; line-height: 1.2; word-break: break-all; min-height: 0; }
         .btn-active-state:active { opacity: 0.8; transform: scale(0.95); }
         
-        /* 写真タイル周り */
         .photo-grid-mini { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; width: 100%; height: 100%; min-height: 0; }
         .photo-container { position: relative; background: white; border: 2px solid #ffedd5; border-radius: 1rem; overflow: visible; height: 100%; min-height: 0; }
         .photo-img-main { width: 100%; height: 100%; object-fit: cover; border-radius: 0.8rem; }
@@ -122,7 +115,7 @@
         const UI_TEXTS = {
             "記録": "きろく", "設定": "せってい", "学びの足跡": "まなびのあしあと", "全部けす": "ぜんぶけす", "全部消す": "ぜんぶけす",
             "話す": "はなす", "決定": "けってい", "やめる": "やめる", "1字消す": "1じけす", "保存しました！": "ほぞんしました！",
-            "どの きょうか？": "どの きょうか？", "しゃしん": "しゃしん", "とじる": "とじる", "やめる": "やめる",
+            "どの きょうか？": "どの きょうか？", "しゃしん": "しゃしん", "とじる": "とじる", "終わる": "おわる",
             "今日のめあて": "きょうのめあて", "できたこと、うまくいったこと": "できたこと、うまくいったこと", "むずかしかったこと、うまくいかなかったこと": "むずかしかったこと、うまくいかなかったこと", "つぎのこと": "つぎのこと",
             "ぜんぶ ほぞんする 💎": "ぜんぶ ほぞんする 💎", "なおして ほぞんする 💎": "なおして ほぞんする 💎",
             "なおす": "なおす", "きろくをみる": "きろくをみる", "もうすぐだよ！": "もうすぐだよ！", "記録から消す": "きろくからけす", "ログイン": "ログイン"
@@ -146,6 +139,14 @@
                 const vv = window.visualViewport;
                 editor.style.height = `${vv.height}px`;
                 window.scrollTo(0, 0);
+            }
+        }
+
+        // 強制的に音声入力を停止する関数
+        function forceStopSpeech() {
+            if (isRec && rec) {
+                rec.stop();
+                isRec = false; // フラグも確実に折る
             }
         }
 
@@ -204,8 +205,17 @@
 
         if(rec) {
             rec.lang = 'ja-JP'; rec.interimResults = true; rec.continuous = true;
-            rec.onstart = function() { isRec = true; lastInterim = ""; document.getElementById('micBtn').classList.add('mic-recording'); document.getElementById('micLabel').innerText = convertUI("やめる", appState.gradeMode); };
-            rec.onend = function() { isRec = false; document.getElementById('micBtn').classList.remove('mic-recording'); document.getElementById('micLabel').innerText = convertUI("話す", appState.gradeMode); if(lastInterim.trim() !== "") sendToGas(lastInterim); lastInterim = ""; };
+            rec.onstart = function() { 
+                isRec = true; lastInterim = ""; 
+                document.getElementById('micBtn').classList.add('mic-recording'); 
+                document.getElementById('micLabel').innerText = convertUI("終わる", appState.gradeMode); 
+            };
+            rec.onend = function() { 
+                isRec = false; 
+                document.getElementById('micBtn').classList.remove('mic-recording'); 
+                document.getElementById('micLabel').innerText = convertUI("話す", appState.gradeMode); 
+                if(lastInterim.trim() !== "") sendToGas(lastInterim); lastInterim = ""; 
+            };
             rec.onresult = function(e) { let interim = ""; for(var i=e.resultIndex; i<e.results.length; i++) { if(e.results[i].isFinal) sendToGas(e.results[i][0].transcript); else interim += e.results[i][0].transcript; } lastInterim = interim; };
         }
 
@@ -257,6 +267,7 @@
         }
 
         function closeEditor(save) {
+            forceStopSpeech(); // 他の操作をしたので音声を止める
             if(save) syncEditorToState();
             document.getElementById('editorOverlay').classList.remove('active');
             document.getElementById('mainContainer').style.opacity = "1";
@@ -276,9 +287,7 @@
             closeModal('subjectModal');
             playSaveSfx();
             const main = document.getElementById('mainContainer');
-            // 吸い込みアニメーション開始
             main.classList.add('suck-in');
-            
             setTimeout(() => {
                 const h = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
                 if(appState.editingId) { 
@@ -289,16 +298,10 @@
                     h.unshift(entry);
                 }
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(h.slice(0, 50)));
-                
-                // リセット：アニメーション完了後に行う
                 resetAll(true);
-                
-                // 修正：戻ってくる動きを見せないように、一瞬 transition を消して配置を戻す
                 main.style.transition = 'none';
                 main.classList.remove('suck-in');
-                // ブラウザにスタイルの変更を強制的に反映させる
                 void main.offsetWidth;
-                // 透明度を戻し、transitionを復活させる（一瞬パッと表示される）
                 main.style.transition = '';
             }, 750);
         }
@@ -436,7 +439,7 @@
         </div>
     </div>
 
-    <!-- 編集画面 -->
+    <!-- 編集画面：テキストエリアをタップすると自動でマイク停止 -->
     <div id="editorOverlay">
         <div class="flex justify-between items-center mb-4 px-2 relative shrink-0">
             <button onclick="closeEditor(false)" data-label="やめる" class="text-gray-400 font-black text-2xl p-2 active:scale-90 transition-all"></button>
@@ -445,26 +448,17 @@
         </div>
         <div class="flex-1 relative flex flex-col min-h-0">
             <div id="loadingStatus" style="display:none;" class="absolute inset-0 bg-white/80 z-[6000] flex flex-col items-center justify-center rounded-[2.5rem]"><div id="loadingText" class="text-3xl font-black text-orange-400 animate-bounce"></div></div>
-            <div id="richDisplay" contenteditable="true" spellcheck="false" oninput="syncEditorToState()"></div>
+            <div id="richDisplay" contenteditable="true" spellcheck="false" oninput="syncEditorToState()" onclick="forceStopSpeech()"></div>
         </div>
         <div class="editor-bottom-nav">
-            <button onclick="document.getElementById('richDisplay').innerText = ''; syncEditorToState();" data-label="全部けす" class="bg-zinc-200 rounded-[1.5rem] py-3 text-zinc-500 font-black text-xs btn-active-state">全部けす</button>
-            <button onclick="document.execCommand('delete', false, null); syncEditorToState();" data-label="1字消す" class="bg-blue-100 rounded-[1.5rem] py-3 text-blue-500 font-black text-xs btn-active-state">1字消す</button>
+            <button onclick="forceStopSpeech(); document.getElementById('richDisplay').innerText = ''; syncEditorToState();" data-label="全部消す" class="bg-zinc-200 rounded-[1.5rem] py-3 text-zinc-500 font-black text-xs btn-active-state"></button>
+            <button onclick="forceStopSpeech(); document.execCommand('delete', false, null); syncEditorToState();" data-label="1字消す" class="bg-blue-100 rounded-[1.5rem] py-3 text-blue-500 font-black text-xs btn-active-state"></button>
             <button id="micBtn" onclick="handleMicAction()" class="bg-sky-500 rounded-[2rem] py-8 text-white font-black text-4xl shadow-lg border-b-8 border-sky-700 btn-active-state"><span id="micLabel" data-label="話す"></span></button>
-            <button onclick="closeEditor(true)" data-label="決定" class="bg-orange-500 rounded-[2rem] py-6 text-white font-black text-2xl shadow-md border-b-4 border-orange-700 btn-active-state">決定</button>
+            <button onclick="closeEditor(true)" data-label="決定" class="bg-orange-500 rounded-[2rem] py-6 text-white font-black text-2xl shadow-md border-b-4 border-orange-700 btn-active-state"></button>
         </div>
     </div>
 
-    <!-- 教科選択：白いカード形式 -->
-    <div id="subjectModal" class="modal-bg" onclick="if(event.target===this) closeModal('subjectModal')">
-        <div class="modal-content text-center shadow-2xl">
-            <h2 data-label="どの きょうか？" class="text-2xl font-black text-orange-400 mb-6 italic"></h2>
-            <div id="subjectGrid" class="subject-grid"></div>
-            <button onclick="closeModal('subjectModal')" data-label="やめる" class="text-gray-400 font-bold">やめる</button>
-        </div>
-    </div>
-
-    <!-- 履歴リストモーダル -->
+    <!-- 各種モーダル -->
     <div id="historyListModal" class="modal-bg" onclick="if(event.target===this) closeModal('historyListModal')">
         <div class="modal-content-wide">
             <div class="flex justify-between items-center mb-2 px-6 shrink-0 pt-4">
@@ -478,13 +472,16 @@
         </div>
     </div>
 
-    <!-- 設定モーダル -->
     <div id="settingsModal" class="modal-bg" onclick="if(event.target===this) closeModal('settingsModal')">
         <div class="modal-content text-center shadow-2xl"><h2 data-label="どの 学年？" class="text-2xl font-black text-orange-400 mb-6 italic"></h2><div id="gradeGrid" class="grade-grid"></div><button onclick="closeModal('settingsModal')" data-label="とじる" class="text-gray-400 font-bold"></button></div>
     </div>
 
+    <div id="subjectModal" class="modal-bg" onclick="if(event.target===this) closeModal('subjectModal')">
+        <div class="modal-content text-center shadow-2xl"><h2 data-label="どの きょうか？" class="text-2xl font-black text-orange-400 mb-6 italic"></h2><div id="subjectGrid" class="subject-grid"></div><button onclick="closeModal('subjectModal')" data-label="やめる" class="text-gray-400 font-bold"></button></div>
+    </div>
+
     <div id="historySubjectModal" class="modal-bg" onclick="if(event.target===this) closeModal('historySubjectModal')">
-        <div class="modal-content text-center shadow-2xl"><h2 data-label="どの きょうか？" class="text-2xl font-black text-orange-400 mb-6 italic"></h2><div id="historySubGrid" class="subject-grid"></div><button onclick="closeModal('historySubjectModal')" data-label="やめる" class="text-gray-400 font-bold">やめる</button></div>
+        <div class="modal-content text-center shadow-2xl"><h2 data-label="どの きょうか？" class="text-2xl font-black text-orange-400 mb-6 italic"></h2><div id="historySubGrid" class="subject-grid"></div><button onclick="closeModal('historySubjectModal')" data-label="やめる" class="text-gray-400 font-bold"></button></div>
     </div>
 
     <div id="photoViewerOverlay" class="modal-bg" onclick="this.classList.remove('active')" style="background-color:rgba(0,0,0,0.95);"><img id="fullPhoto" class="max-w-[95%] max-h-[85%] object-contain rounded-2xl border-4 border-white shadow-2xl"><p class="text-white font-black mt-6 text-xl animate-bounce italic">タップして とじる</p></div>
