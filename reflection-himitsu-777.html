@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>学びの足跡 v10.9</title>
+    <title>学びの足跡 v11.1</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body { height: 100dvh; background-color: #fffbeb; margin: 0; display: flex; flex-direction: column; overflow: hidden; font-family: sans-serif; }
         
-        /* メインコンテナ：左上を起点に吸い込まれる */
+        /* メインコンテナ：左上（設定ボタン側）を起点に吸い込まれる */
         .main-container { 
             flex: 1; display: flex; flex-direction: column; padding: 0.8rem; gap: 0.5rem; min-height: 0; 
             transition: all 0.7s cubic-bezier(0.6, -0.28, 0.735, 0.045); 
@@ -35,6 +35,7 @@
         .border-green { border-color: #d9f99d !important; }
         .border-orange { border-color: #ffedd5 !important; }
 
+        /* ログイン・登録画面：重なりバグ防止のため独立 */
         #authOverlay { position: fixed; inset: 0; background-color: #fb923c; z-index: 1000000; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 2rem; }
         #authOverlay.active { display: flex; }
         .auth-card { background: white; border-radius: 3rem; padding: 2.5rem; width: 100%; max-width: 26rem; text-align: center; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1); }
@@ -51,7 +52,7 @@
         .modal-bg.active { display: flex; }
         
         .modal-content-wide { background: #fffbeb; border-radius: 3rem; padding: 1rem; width: 96%; max-width: 75rem; border: 8px solid #ffedd5; position: relative; max-height: 94vh; display: flex; flex-direction: column; }
-        .modal-content { background: white; border-radius: 3rem; padding: 2rem; width: 100%; max-width: 32rem; border: 8px solid #ffedd5; position: relative; max-height: 90vh; overflow-y: auto; }
+        .modal-content { background: white; border-radius: 3rem; padding: 2rem; width: 100%; max-width: 38rem; border: 8px solid #ffedd5; position: relative; max-height: 90vh; overflow-y: auto; }
         
         .history-card { background: white; border: 6px solid #ffedd5; border-radius: 2.5rem; padding: 1.2rem; position: relative; display: flex; flex-direction: column; transition: transform 0.2s; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
         .mini-tiles-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem; margin-top: 0.8rem; flex: 1; }
@@ -74,7 +75,8 @@
         
         .subject-grid, .grade-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
         .subject-btn, .grade-btn { background-color: #fb923c; color: white; padding: 1.2rem; border-radius: 1.5rem; font-weight: 900; font-size: 1.2rem; box-shadow: 0 4px 0 #ea580c; text-align: center; }
-        .grade-btn { background-color: #0ea5e9; box-shadow: 0 4px 0 #0284c7; }
+        /* 漢字レベルボタン */
+        .grade-btn { background-color: #0ea5e9; box-shadow: 0 4px 0 #0284c7; font-size: 1rem; padding: 1.4rem 0.5rem; }
         .grade-btn-active { background-color: #ef4444 !important; box-shadow: 0 4px 0 #b91c1c !important; }
         
         .footer-buttons { flex-shrink: 0; display: flex; gap: 0.6rem; padding-bottom: 0.5rem; }
@@ -105,20 +107,31 @@
         const KANJI_LISTS = {
             1: "一右雨円王音下火花貝学気九休玉金空月犬見五口校左三山子四糸字耳七車手十出女小上森人水正生青夕石赤千川先早草足村大男竹中虫町天田土二日入年白八百文木本名目立力林六",
             2: "引羽雲園遠何科夏家歌画回会海絵外角楽活間丸岩顔汽記帰弓牛魚京強教近兄形計元言原戸古午後語工公広交光考行高黄合谷国黒今才細作算止市矢姉思紙寺自時室社弱首秋週春書少場色食心新親図数西声星晴切雪船線前組走多太体台地池知茶昼長鳥朝直通弟店点電刀冬当東胆東答頭同道読内南肉馬売買麦半番父風分聞米歩母方北毎妹万明鳴毛門夜野友用曜来里理話",
-            3: "悪安暗医委意育員院飲運泳駅央横屋温化荷界開階寒感漢館岸起期客究急級宫球去橋業曲局銀区苦具君係軽血決研県庫湖向幸港号根祭皿仕死使始指歯詩次事持式実写者主守取酒受州拾終習集住重宿所暑助昭消商章勝乗植申身神真深進世整昔全相送想息速族他打対待代第題炭短談着注柱丁帳調追定庭笛鉄転都度投豆島湯登等動童農波配倍箱畑発反坂板皮悲美鼻筆氷表秒病品負部服福物平返勉放味命面問役薬由油有遊予羊洋葉陽様落流旅両緑礼列練路和",
+            3: "悪安暗医委意育員院飲運泳駅央横屋温化荷界開階寒感漢馆岸起期客究急級宫球去橋業曲局銀区苦具君係軽血決研県庫湖向幸港号根祭皿仕死使始指歯詩次事持式実写者主守取酒受州拾終習集住重宿所暑助昭消商章勝乗植申身神真深進世整昔全相送想息速族他打対待代第題炭短談着注柱丁帳調追定庭笛鉄転都度投豆島湯登等動童農波配倍箱畑発反坂板皮悲美鼻筆氷表秒病品負部服福物平返勉放味命面問役薬由油有遊予羊洋葉陽様落流旅両緑礼列練路和",
             4: "愛案以衣位茨印英栄媛塩岡億加果貨課芽賀改械害街各覚潟完官管関観願岐希旗器機議求泣給挙漁共協鏡競極熊訓軍郡群径景芸欠結建健験固功好香候康佐差菜最埼材崎昨札刷察参産散残氏司試児治滋辞鹿失借種周祝順初松笑唱焼照城縄臣信井成省清静席積折節説浅戦選然争倉巣束側続卒孫帯隊達単置仲沖兆低底的な典伝徒努灯働特徳栃木奈梨熱念敗梅博阪飯飛必票標不夫付府阜富副兵別辺変便包法望牧末満未民無約勇要養浴利陸良料量輪類令冷例連老労録",
             5: "圧囲移因永営衛易益液演応往桜可仮価河過快解格確額刊幹慣眼紀基寄規喜技義逆久旧救居許境均禁句型経潔件険検限現減故個護効厚耕航鉱構興講告混査再災妻採際在財罪殺雑酸賛士支史志枝师资飼示似識質舎謝授修述術準序招証象賞条状常表情織職制性政勢精製税責績接設絶祖素総造像増則测属率損貸態団断築貯張停提程適統堂銅導得毒独任燃能破犯判版比肥非費備評貧布婦武復複仏粉編弁保墓报豊防貿暴脈務夢迷綿輸余容略留領歴",
-            6: "胃異遺域宇映延沿順我灰拡革閣割株干巻看簡危机揮貴疑吸供胸郷勤筋系敬警劇激穴券絹権憲源厳己呼誤后孝皇紅降鋼刻穀骨困砂座済裁策冊蚕至私姿視詞誌磁射捨尺若樹収宗就衆従縦縮熟純処署諸除承将傷障蒸針仁垂推寸盛聖誠舌宣専泉洗染銭善奏窓創装層操蔵臓存尊退宅担探誕段暖値宙忠著庁頂腸潮賃痛敵展討党糖届難乳認納脳派拝背肺俳班晩否批秘俵腹奮並陛閉片補暮宝訪亡忘棒枚幕密盟模訳郵優預幼欲翌乱卵覧裏律臨朗論"
+            6: "胃異遺域宇映延沿順我灰拡革閣割株干巻看簡危机揮貴疑吸供胸郷勤筋系ペン系敬警劇激穴券絹権憲源厳己呼誤后孝皇紅降鋼刻穀骨困砂座済裁策冊蚕至私姿視詞誌磁射捨尺若樹収宗就衆従縦縮熟純処署諸除承将傷障蒸針仁垂推寸盛聖誠舌宣専泉洗染銭善奏窓創装層操蔵臓存尊退宅担探誕段暖値宙忠著庁頂腸潮賃痛敵展討党糖届難乳認納脳派拝背肺俳班晩否批秘俵腹奮並陛閉片補暮宝訪亡忘棒枚幕密盟模訳郵優預幼欲翌乱卵覧裏律臨朗論"
         };
 
-        const GRADE_LABELS = { 0: "ひらがな", 1: "1ねんせい", 2: "2ねんせい", 3: "3ねんせい", 4: "4ねんせい", 5: "5ねんせい", 6: "6ねんせい", 99: "かんじ全部" };
+        const GRADE_NAMES = { 
+            0: "ひらがな", 
+            1: "1年生までのかん字", 
+            2: "2年生までのかん字", 
+            3: "3年生までの漢字", 
+            4: "4年生までの漢字", 
+            5: "5年生までの漢字", 
+            6: "6年生までの漢字", 
+            99: "すべての漢字" 
+        };
+
         const UI_TEXTS = {
             "記録": "きろく", "設定": "せってい", "学びの足跡": "まなびのあしあと", "全部けす": "ぜんぶけす", "全部消す": "ぜんぶけす",
             "話す": "はなす", "決定": "けってい", "やめる": "やめる", "1字消す": "1じけす", "保存しました！": "ほぞんしました！",
             "どの きょうか？": "どの きょうか？", "しゃしん": "しゃしん", "とじる": "とじる", "終わる": "おわる",
             "今日のめあて": "きょうのめあて", "できたこと、うまくいったこと": "できたこと、うまくいったこと", "むずかしかったこと、うまくいかなかったこと": "むずかしかったこと、うまくいかなかったこと", "つぎのこと": "つぎのこと",
             "ぜんぶ ほぞんする 💎": "ぜんぶ ほぞんする 💎", "なおして ほぞんする 💎": "なおして ほぞんする 💎",
-            "なおす": "なおす", "きろくをみる": "きろくをみる", "もうすぐだよ！": "もうすぐだよ！", "記録から消す": "きろくからけす", "ログイン": "ログイン"
+            "なおす": "なおす", "きろくをみる": "きろくをみる", "もうすぐだよ！": "もうすぐだよ！",
+            "記録から消す": "きろくからけす", "ログイン": "ログイン", "出てくる漢字を選んでね。": "でてくるかんじをえらんでね。"
         };
 
         let appState = { activeId: "", tiles: { t1: [], t2: [], t3: [], t4: [], photos: [] }, badges: { t1: "", t2: "", t3: "", t4: "" }, editingId: null, user: null, isDeleteMode: false, gradeMode: 1 };
@@ -142,13 +155,7 @@
             }
         }
 
-        // 強制的に音声入力を停止する関数
-        function forceStopSpeech() {
-            if (isRec && rec) {
-                rec.stop();
-                isRec = false; // フラグも確実に折る
-            }
-        }
+        function forceStopSpeech() { if (isRec && rec) { rec.stop(); isRec = false; } }
 
         function isKanji(ch) { return (ch >= '\u4e00' && ch <= '\u9faf'); }
         function getAllowedKanji(lv) { if (lv === 0) return ""; if (lv === 99) return "ALL"; let list = ""; for (let i = 1; i <= lv; i++) list += KANJI_LISTS[i] || ""; return list; }
@@ -183,7 +190,7 @@
             document.getElementById('appTitle').innerText = convertUI("学びの足跡", lv);
             document.getElementById('historyBtnLabel').innerText = convertUI("記録をみる", lv);
             document.getElementById('loadingText').innerText = convertUI("もうすぐだよ！", lv);
-            document.getElementById('currentModeTag').innerText = convertUI(GRADE_LABELS[lv], lv);
+            document.getElementById('currentModeTag').innerText = convertUI(GRADE_NAMES[lv], lv);
             let saveLabelKey = appState.editingId ? "なおして ほぞんする 💎" : "ぜんぶ ほぞんする 💎";
             if (appState.isDeleteMode) saveLabelKey = "記録から消す";
             document.getElementById('saveBtnLabel').innerText = convertUI(saveLabelKey, lv);
@@ -191,8 +198,20 @@
 
         function checkAuth() {
             var auth = localStorage.getItem(AUTH_KEY);
-            if (!auth) { document.getElementById('authOverlay').classList.add('active'); document.getElementById('registrationForm').style.display = "block"; }
-            else { appState.user = JSON.parse(auth); document.getElementById('authOverlay').classList.add('active'); document.getElementById('loginForm').style.display = "block"; document.getElementById('loginMsg').innerText = appState.user.class + " " + appState.user.no + "番の パスワードを いれてね"; }
+            const loginArea = document.getElementById('loginForm');
+            const regArea = document.getElementById('registrationForm');
+            
+            if (!auth) { 
+                document.getElementById('authOverlay').classList.add('active'); 
+                loginArea.style.display = "none";
+                regArea.style.display = "block"; 
+            } else { 
+                appState.user = JSON.parse(auth); 
+                document.getElementById('authOverlay').classList.add('active'); 
+                regArea.style.display = "none";
+                loginArea.style.display = "block"; 
+                document.getElementById('loginMsg').innerText = appState.user.class + " " + appState.user.no + "番の パスワードを いれてね"; 
+            }
         }
         function login() { if (document.getElementById('loginPass').value === appState.user.pass) document.getElementById('authOverlay').classList.remove('active'); else alert("パスワードが ちがうよ！"); }
         function register() { var c = document.getElementById('regClass').value; var n = document.getElementById('regNo').value; var p = document.getElementById('regPass').value; if(!c || !n || !p) return alert("ぜんぶ いれてね！"); appState.user = { class: c, no: n, pass: p }; localStorage.setItem(AUTH_KEY, JSON.stringify(appState.user)); document.getElementById('authOverlay').classList.remove('active'); refreshMainView(); }
@@ -205,17 +224,8 @@
 
         if(rec) {
             rec.lang = 'ja-JP'; rec.interimResults = true; rec.continuous = true;
-            rec.onstart = function() { 
-                isRec = true; lastInterim = ""; 
-                document.getElementById('micBtn').classList.add('mic-recording'); 
-                document.getElementById('micLabel').innerText = convertUI("終わる", appState.gradeMode); 
-            };
-            rec.onend = function() { 
-                isRec = false; 
-                document.getElementById('micBtn').classList.remove('mic-recording'); 
-                document.getElementById('micLabel').innerText = convertUI("話す", appState.gradeMode); 
-                if(lastInterim.trim() !== "") sendToGas(lastInterim); lastInterim = ""; 
-            };
+            rec.onstart = function() { isRec = true; lastInterim = ""; document.getElementById('micBtn').classList.add('mic-recording'); document.getElementById('micLabel').innerText = convertUI("終わる", appState.gradeMode); };
+            rec.onend = function() { isRec = false; document.getElementById('micBtn').classList.remove('mic-recording'); document.getElementById('micLabel').innerText = convertUI("話す", appState.gradeMode); if(lastInterim.trim() !== "") sendToGas(lastInterim); lastInterim = ""; };
             rec.onresult = function(e) { let interim = ""; for(var i=e.resultIndex; i<e.results.length; i++) { if(e.results[i].isFinal) sendToGas(e.results[i][0].transcript); else interim += e.results[i][0].transcript; } lastInterim = interim; };
         }
 
@@ -250,6 +260,7 @@
 
         function syncEditorToState() {
             const plainText = document.getElementById('richDisplay').innerText;
+            // 重要：ここで内部データを常にsurface/furiganaペアとして保持するように修正
             appState.tiles[appState.activeId] = plainText.trim() === "" ? [] : [{surface: plainText, furigana: plainText}];
             if(plainText.trim() !== "") { appState.isDeleteMode = false; document.getElementById('saveBtnContainer').style.backgroundColor = appState.editingId ? "#38bdf8" : "#fb923c"; }
         }
@@ -267,7 +278,7 @@
         }
 
         function closeEditor(save) {
-            forceStopSpeech(); // 他の操作をしたので音声を止める
+            forceStopSpeech();
             if(save) syncEditorToState();
             document.getElementById('editorOverlay').classList.remove('active');
             document.getElementById('mainContainer').style.opacity = "1";
@@ -321,7 +332,7 @@
             if(id === 'subjectModal') { const grid = document.getElementById('subjectGrid'); grid.innerHTML = ALL_SUBJECTS.map(s => `<button onclick="executeFinalSave('${s}')" class="subject-btn">${convertUI(s, lv)}</button>`).join(''); }
             if(id === 'settingsModal') { 
                 const grid = document.getElementById('gradeGrid'); 
-                const grades = [{v:0, t:"ひらがな"}, {v:1, t:"1年生"}, {v:2, t:"2年生"}, {v:3, t:"3年生"}, {v:4, t:"4年生"}, {v:5, t:"5年生"}, {v:6, t:"6年生"}, {v:99, t:"かんじ全部"}]; 
+                const grades = [{v:0, t:"ひらがな"}, {v:1, t:"1年生までのかん字"}, {v:2, t:"2年生までのかん字"}, {v:3, t:"3年生までの漢字"}, {v:4, t:"4年生までの漢字"}, {v:5, t:"5年生までの漢字"}, {v:6, t:"6年生までの漢字"}, {v:99, t:"すべての漢字"}]; 
                 grid.innerHTML = grades.map(g => { const activeClass = (appState.gradeMode === g.v) ? 'grade-btn-active' : ''; return `<button onclick="changeGrade(${g.v}); closeModal('settingsModal')" class="grade-btn ${activeClass}">${convertUI(g.t, lv)}</button>`; }).join(''); 
             }
             if(id === 'historySubjectModal') { const grid = document.getElementById('historySubGrid'); grid.innerHTML = ALL_SUBJECTS.map(s => `<button onclick="renderHistoryList('${s}')" class="subject-btn">${convertUI(s, lv)}</button>`).join(''); }
@@ -355,11 +366,7 @@
             if(item) { 
                 appState.tiles = JSON.parse(JSON.stringify(item.fullData)); 
                 appState.badges = JSON.parse(JSON.stringify(item.badges || {})); 
-                appState.editingId = id; 
-                appState.isDeleteMode = false; 
-                document.getElementById('saveBtnContainer').style.backgroundColor = "#38bdf8"; 
-                refreshMainView(); 
-                closeModal('historyListModal');
+                appState.editingId = id; appState.isDeleteMode = false; document.getElementById('saveBtnContainer').style.backgroundColor = "#38bdf8"; refreshMainView(); closeModal('historyListModal');
             }
         }
 
@@ -376,18 +383,18 @@
 <body class="select-none">
 
     <div id="authOverlay">
+        <div id="loginForm" class="auth-card" style="display:none;">
+            <h2 class="text-3xl font-black text-orange-500 mb-6 italic">おかえり！</h2>
+            <p id="loginMsg" class="text-gray-500 font-bold mb-4 text-sm"></p>
+            <input type="password" id="loginPass" placeholder="パスワード">
+            <button onclick="login()" data-label="ログイン" class="w-full bg-orange-500 text-white py-6 rounded-2xl font-black text-2xl shadow-xl mt-4"></button>
+        </div>
         <div id="registrationForm" class="auth-card" style="display:none;">
             <h2 class="text-3xl font-black text-orange-500 mb-6 italic">はじめまして！</h2>
             <input type="text" id="regClass" placeholder="なに組？">
             <input type="number" id="regNo" placeholder="出席ばんごう">
             <input type="password" id="regPass" placeholder="パスワード">
             <button onclick="register()" class="w-full bg-orange-500 text-white py-6 rounded-2xl font-black text-2xl shadow-xl mt-4">はじめる！</button>
-        </div>
-        <div id="loginForm" class="auth-card" style="display:none;">
-            <h2 class="text-3xl font-black text-orange-500 mb-6 italic">おかえり！</h2>
-            <p id="loginMsg" class="text-gray-500 font-bold mb-4 text-sm"></p>
-            <input type="password" id="loginPass" placeholder="パスワード">
-            <button onclick="login()" data-label="ログイン" class="w-full bg-orange-500 text-white py-6 rounded-2xl font-black text-2xl shadow-xl mt-4"></button>
         </div>
     </div>
 
@@ -433,13 +440,13 @@
                 </button>
             </div>
             <div class="footer-buttons">
-                <button onclick="resetAll()" data-label="全部けす" class="flex-1 bg-red-400 text-white rounded-[2rem] py-5 font-black text-2xl shadow-xl border-b-8 border-red-600 active:scale-95 transition-all"></button>
+                <button onclick="resetAll()" data-label="全部消す" class="flex-1 bg-red-400 text-white rounded-[2rem] py-5 font-black text-2xl shadow-xl border-b-8 border-red-600 active:scale-95 transition-all"></button>
                 <button id="saveBtnContainer" onclick="startSaveProcess()" class="flex-[2] bg-orange-400 text-white rounded-[2rem] py-5 font-black text-2xl shadow-xl border-b-8 border-orange-600 active:scale-95 transition-all"><span id="saveBtnLabel"></span></button>
             </div>
         </div>
     </div>
 
-    <!-- 編集画面：テキストエリアをタップすると自動でマイク停止 -->
+    <!-- エディタレイヤー -->
     <div id="editorOverlay">
         <div class="flex justify-between items-center mb-4 px-2 relative shrink-0">
             <button onclick="closeEditor(false)" data-label="やめる" class="text-gray-400 font-black text-2xl p-2 active:scale-90 transition-all"></button>
@@ -459,29 +466,20 @@
     </div>
 
     <!-- 各種モーダル -->
-    <div id="historyListModal" class="modal-bg" onclick="if(event.target===this) closeModal('historyListModal')">
-        <div class="modal-content-wide">
-            <div class="flex justify-between items-center mb-2 px-6 shrink-0 pt-4">
-                <div id="historyTitleSmall" class="text-xl font-black text-orange-400 italic"></div>
-                <div></div>
-            </div>
-            <div id="historyList" class="flex-1 overflow-y-auto px-4 grid grid-cols-1 md:grid-cols-2 gap-6 pb-24"></div>
-            <div class="absolute bottom-6 right-8">
-                <button onclick="closeModal('historyListModal')" data-label="とじる" class="bg-gray-100 text-gray-400 px-12 py-4 rounded-full font-black text-2xl shadow-md transition-all active:scale-95 italic"></button>
-            </div>
-        </div>
+    <div id="subjectModal" class="modal-bg" onclick="if(event.target===this) closeModal('subjectModal')">
+        <div class="modal-content text-center shadow-2xl"><h2 data-label="どの きょうか？" class="text-2xl font-black text-orange-400 mb-6 italic"></h2><div id="subjectGrid" class="subject-grid"></div><button onclick="closeModal('subjectModal')" data-label="やめる" class="text-gray-400 font-bold">やめる</button></div>
     </div>
 
     <div id="settingsModal" class="modal-bg" onclick="if(event.target===this) closeModal('settingsModal')">
-        <div class="modal-content text-center shadow-2xl"><h2 data-label="どの 学年？" class="text-2xl font-black text-orange-400 mb-6 italic"></h2><div id="gradeGrid" class="grade-grid"></div><button onclick="closeModal('settingsModal')" data-label="とじる" class="text-gray-400 font-bold"></button></div>
+        <div class="modal-content text-center shadow-2xl"><h2 data-label="出てくる漢字を選んでね。" class="text-2xl font-black text-orange-400 mb-6 italic"></h2><div id="gradeGrid" class="grade-grid"></div><button onclick="closeModal('settingsModal')" data-label="とじる" class="text-gray-400 font-bold"></button></div>
     </div>
 
-    <div id="subjectModal" class="modal-bg" onclick="if(event.target===this) closeModal('subjectModal')">
-        <div class="modal-content text-center shadow-2xl"><h2 data-label="どの きょうか？" class="text-2xl font-black text-orange-400 mb-6 italic"></h2><div id="subjectGrid" class="subject-grid"></div><button onclick="closeModal('subjectModal')" data-label="やめる" class="text-gray-400 font-bold"></button></div>
+    <div id="historyListModal" class="modal-bg" onclick="if(event.target===this) closeModal('historyListModal')">
+        <div class="modal-content-wide"><div class="flex justify-between items-center mb-2 px-6 shrink-0 pt-4"><div id="historyTitleSmall" class="text-xl font-black text-orange-400 italic"></div><div></div></div><div id="historyList" class="flex-1 overflow-y-auto px-4 grid grid-cols-1 md:grid-cols-2 gap-6 pb-24"></div><div class="absolute bottom-6 right-8"><button onclick="closeModal('historyListModal')" data-label="とじる" class="bg-gray-100 text-gray-400 px-12 py-4 rounded-full font-black text-2xl shadow-md transition-all active:scale-95 italic"></button></div></div>
     </div>
 
     <div id="historySubjectModal" class="modal-bg" onclick="if(event.target===this) closeModal('historySubjectModal')">
-        <div class="modal-content text-center shadow-2xl"><h2 data-label="どの きょうか？" class="text-2xl font-black text-orange-400 mb-6 italic"></h2><div id="historySubGrid" class="subject-grid"></div><button onclick="closeModal('historySubjectModal')" data-label="やめる" class="text-gray-400 font-bold"></button></div>
+        <div class="modal-content text-center shadow-2xl"><h2 data-label="どの きょうか？" class="text-2xl font-black text-orange-400 mb-6 italic"></h2><div id="historySubGrid" class="subject-grid"></div><button onclick="closeModal('historySubjectModal')" data-label="やめる" class="text-gray-400 font-bold">やめる</button></div>
     </div>
 
     <div id="photoViewerOverlay" class="modal-bg" onclick="this.classList.remove('active')" style="background-color:rgba(0,0,0,0.95);"><img id="fullPhoto" class="max-w-[95%] max-h-[85%] object-contain rounded-2xl border-4 border-white shadow-2xl"><p class="text-white font-black mt-6 text-xl animate-bounce italic">タップして とじる</p></div>
